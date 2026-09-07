@@ -2,7 +2,7 @@ name = "runner"
 description = "Exécution de validations longues, commandes connues ou lots mécaniques conséquents. Les petites tâches locales peuvent rester à la racine."
 
 model = "gpt-5.6-luna"
-model_reasoning_effort = "max"
+model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 
 developer_instructions = """

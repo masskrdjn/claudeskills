@@ -59,14 +59,15 @@ dépendant ; ne pas inventer du travail parallèle ni dupliquer celui de l'enfan
 
 | Rôle | Modèle | Effort B |
 |---|---|---|
-| `scout`, `runner`, `researcher` | `gpt-5.6-luna` | `max` |
+| `scout`, `researcher` | `gpt-5.6-luna` | `max` |
+| `runner` | `gpt-5.6-luna` | `medium` |
 | `builder` | `gpt-5.6-terra` | `high` |
 | Racine | `gpt-5.6-sol` | `medium` |
 | `architect` | `gpt-6-astra` | `low` |
 
-Luna reste volontairement en `max` pour préserver la pertinence. Une baisse
-d'effort nécessite une comparaison montrant une qualité préservée et un gain
-sur le coût complet, reprises comprises. Les fichiers TOML de rôle fixent
+`scout` et `researcher` restent volontairement en `max` pour préserver la
+pertinence. `runner` utilise `medium`, validé sur un lot mécanique bien
+spécifié ; les ambiguïtés restent à la racine. Les fichiers TOML de rôle fixent
 explicitement modèle et effort ; les permissions effectives restent soumises
 au runtime parent, comme précisé dans AGENTS.md. `builder` peut passer à `xhigh` sur décision explicite.
 Un générique n'est utilisé que si aucun rôle ne convient ; son défaut reste

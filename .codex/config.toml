@@ -1,4 +1,4 @@
-# Variante B : routage sélectif, efforts inchangés pour comparaison.
+# Variante B : routage sélectif, runner optimisé après comparaison.
 
 # Racine = Sol. Astra n'est JAMAIS racine en régime normal.
 model = "gpt-5.6-sol"
