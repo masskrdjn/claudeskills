@@ -7,10 +7,16 @@ description: Routage sélectif multi-modèles pour la racine lorsqu'une déléga
 
 ## Objectif et périmètre
 
-Préserver la qualité, puis réduire le délai, sous contrainte de quota Astra.
+Préserver la qualité et la pertinence du résultat, puis réduire le coût total,
+puis le délai, sous contrainte de quota Astra. Ne pas abaisser les critères
+d'acceptation, omettre une vérification nécessaire ou simplifier la demande
+pour rendre un modèle moins coûteux utilisable.
 Comparer le coût du travail complet : lancement, contexte, exécution, attente,
 intégration et éventuelle reprise. Le modèle le moins cher par token ne rend
-pas automatiquement une délégation rentable.
+pas automatiquement une délégation rentable. Comparer les consommations de
+tous les agents, racine comprise, pondérées par les tarifs applicables au
+modèle et aux tokens entrants, en cache et sortants ; ne pas confondre crédits
+Codex et facturation API. Sans mesure, annoncer un gain attendu, pas démontré.
 
 Ce skill est destiné à la racine uniquement. Un enfant déjà mandaté ne le
 recharge pas, ne refait pas de triage et ne redélègue pas. Il suit sa mission,
@@ -24,7 +30,7 @@ compter les opérations pour déclencher une délégation.
 
 | Situation | Chemin normal |
 |---|---|
-| Travail local borné : jusqu'à trois fichiers applicatifs et quelques appels prévisibles | Sol : lecture, modification et validation |
+| Petit travail local dont la délégation ne serait pas amortie | Sol : lecture, modification et validation |
 | Exploration étendue ou indépendante d'un travail utile de la racine | `scout` |
 | Validation longue, commandes connues ou lot mécanique conséquent | `runner` |
 | Implémentation ordinaire substantielle dont le contrat est décidé | `builder`, validation ciblée comprise |
@@ -33,10 +39,14 @@ compter les opérations pour déclencher une délégation.
 | Raisonnement complexe ou intégration | Sol |
 | Arbitrage technique difficile, ou décision structurante coûteuse à corriger nécessitant un avis expert | `architect` |
 
-Trois fichiers est un repère expérimental, pas une frontière : une petite
-modification risquée peut demander une revue indépendante ; une modification
-mécanique plus large peut rester simple. Le niveau dépend du raisonnement
-nécessaire, la délégation du travail utile qu'elle amortit.
+Choisir le rôle le moins coûteux capable de respecter les critères
+d'acceptation sans perte de pertinence, lorsque la coordination est amortie.
+La capacité de Sol à faire le travail lui-même n'interdit pas de déléguer.
+Une petite modification risquée peut demander une revue indépendante ; le
+nombre de fichiers ne détermine ni le niveau nécessaire ni la rentabilité.
+Si une ambiguïté décisive dépasse le rôle choisi, Sol garde cet arbitrage et
+ne transmet que la partie suffisamment définie ; ne pas déléguer à bas coût
+en comptant sur une reprise systématique pour obtenir la qualité attendue.
 
 Quand un choix de palier est utile, annoncer une ligne de triage après cette
 inspection et avant la délégation. Pour une simple lecture directe, ne pas
@@ -54,16 +64,13 @@ dépendant ; ne pas inventer du travail parallèle ni dupliquer celui de l'enfan
 | Racine | `gpt-5.6-sol` | `medium` |
 | `architect` | `gpt-6-astra` | `low` |
 
-B conserve les efforts initiaux pour isoler l'effet du routage. Les fichiers
-TOML de rôle fixent explicitement modèle, effort et permissions : pas
-d'héritage implicite. `builder` peut passer à `xhigh` sur décision explicite.
+Luna reste volontairement en `max` pour préserver la pertinence. Une baisse
+d'effort nécessite une comparaison montrant une qualité préservée et un gain
+sur le coût complet, reprises comprises. Les fichiers TOML de rôle fixent
+explicitement modèle et effort ; les permissions effectives restent soumises
+au runtime parent, comme précisé dans AGENTS.md. `builder` peut passer à `xhigh` sur décision explicite.
 Un générique n'est utilisé que si aucun rôle ne convient ; son défaut reste
 Luna/max, jamais Astra. Tout accès Astra passe par `architect`.
-
-La variante expérimentale C utilise runner/low et scout-researcher/medium.
-Elle n'est pas activée par B. En C, une difficulté analytique peut justifier
-de remonter l'effort explicitement avec les preuves recueillies ; ni une
-erreur identique ni un problème d'environnement ne justifient cette remontée.
 
 ## Transmettre sans perdre les conditions
 
