@@ -1,9 +1,9 @@
 name = "builder"
-description = "Implémentation ordinaire : modifications locales ou intermédiaires, correctifs bien spécifiés, debug courant. À utiliser quand le quoi-faire est décidé et qu'il reste à l'écrire correctement."
+description = "Implémentation substantielle ou indépendante dont la délégation amortit la coordination. Les modifications locales bornées restent à la racine."
 
 model = "gpt-5.6-terra"
-model_reasoning_effort = "high"
-# `xhigh` reste possible pour une tâche exceptionnellement difficile, mais
+model_reasoning_effort = "medium"
+# `high` ou `xhigh` restent possibles pour une tâche exceptionnellement difficile, mais
 # c'est une décision explicite de l'orchestrateur, jamais le défaut.
 sandbox_mode = "workspace-write"
 

@@ -17,6 +17,11 @@ pas automatiquement une délégation rentable. Comparer les consommations de
 tous les agents, racine comprise, pondérées par les tarifs applicables au
 modèle et aux tokens entrants, en cache et sortants ; ne pas confondre crédits
 Codex et facturation API. Sans mesure, annoncer un gain attendu, pas démontré.
+Toute comparaison économique exige un rapport de mesure `Complete = true`.
+Un run incomplet a exactement le statut `non observable` : ne jamais citer ses
+tokens ou durées dans un ratio, une médiane, une comparaison ou une
+recommandation économique. S'il reste moins de deux runs complets, conclure
+qu'aucune comparaison économique n'est possible et conserver les diagnostics.
 
 Ce skill est destiné à la racine uniquement. Un enfant déjà mandaté ne le
 recharge pas, ne refait pas de triage et ne redélègue pas. Il suit sa mission,
@@ -30,14 +35,25 @@ compter les opérations pour déclencher une délégation.
 
 | Situation | Chemin normal |
 |---|---|
-| Petit travail local dont la délégation ne serait pas amortie | Sol : lecture, modification et validation |
+| Petit travail local, lot déterministe borné ou implémentation locale au contrat explicite | Sol : lecture, modification et validation |
 | Exploration étendue ou indépendante d'un travail utile de la racine | `scout` |
-| Validation longue, commandes connues ou lot mécanique conséquent | `runner` |
-| Implémentation ordinaire substantielle dont le contrat est décidé | `builder`, validation ciblée comprise |
+| Validation assez longue et indépendante pour amortir la coordination | `runner` |
+| Implémentation substantielle ou indépendante dont la délégation est amortie | `builder`, validation ciblée comprise |
 | Consultation documentaire ponctuelle | Sol directement |
 | Recherche documentaire à plusieurs questions ou sources | `researcher` |
 | Raisonnement complexe ou intégration | Sol |
 | Arbitrage technique difficile, ou décision structurante coûteuse à corriger nécessitant un avis expert | `architect` |
+
+Le routage `researcher` est impératif : créer ce sous-agent avant toute
+consultation ou attente, vérifier qu'un identifiant actif a été retourné, puis
+l'attendre. La racine ne réalise pas elle-même la recherche documentaire
+multiple et n'appelle jamais `wait` sans enfant actif.
+
+Le routage `scout` est impératif lorsqu'il faut établir une cause en traçant
+des appelants ou un flux à travers plusieurs fichiers ou modules. La racine
+peut seulement inspecter assez pour borner la mission ; elle crée effectivement
+`scout`, vérifie son identifiant actif et l'attend au lieu de réaliser elle-même
+l'exploration.
 
 Choisir le rôle le moins coûteux capable de respecter les critères
 d'acceptation sans perte de pertinence, lorsque la coordination est amortie.
@@ -59,17 +75,20 @@ dépendant ; ne pas inventer du travail parallèle ni dupliquer celui de l'enfan
 
 | Rôle | Modèle | Effort B |
 |---|---|---|
-| `scout`, `researcher` | `gpt-5.6-luna` | `max` |
+| `scout` | `gpt-5.6-luna` | `high` |
+| `researcher` | `gpt-5.6-luna` | `max` |
 | `runner` | `gpt-5.6-luna` | `medium` |
-| `builder` | `gpt-5.6-terra` | `high` |
+| `builder` | `gpt-5.6-terra` | `medium` |
 | Racine | `gpt-5.6-sol` | `medium` |
 | `architect` | `gpt-6-astra` | `low` |
 
-`scout` et `researcher` restent volontairement en `max` pour préserver la
-pertinence. `runner` utilise `medium`, validé sur un lot mécanique bien
-spécifié ; les ambiguïtés restent à la racine. Les fichiers TOML de rôle fixent
-explicitement modèle et effort ; les permissions effectives restent soumises
-au runtime parent, comme précisé dans AGENTS.md. `builder` peut passer à `xhigh` sur décision explicite.
+`scout` utilise `high`, plus rapide et légèrement moins coûteux à qualité
+préservée dans les mesures ; `researcher` reste en `max`, moins consommateur
+que `high` sur le comparatif documentaire. `runner` et `builder` utilisent
+`medium` lorsque leur délégation est amortie ; les ambiguïtés restent à la
+racine. Les fichiers TOML de rôle fixent explicitement modèle et effort ; les
+permissions effectives restent soumises au runtime parent, comme précisé dans
+AGENTS.md. `builder` peut passer à `high` ou `xhigh` sur décision explicite.
 Un générique n'est utilisé que si aucun rôle ne convient ; son défaut reste
 Luna/max, jamais Astra. Tout accès Astra passe par `architect`.
 
@@ -153,3 +172,7 @@ Conserver les restrictions de chaque rôle. Ne jamais utiliser `--yolo`,
 du parent pour consulter Astra. Les overrides parent peuvent prévaloir sur les
 defaults enfants : si les restrictions d'architect ne tiennent plus, isoler la
 décision dans une session adaptée plutôt que les contourner.
+Après chaque réponse, vérifier dans la trace persistante le rôle, le modèle et
+l'effort effectifs. Sans preuve `architect` + `gpt-6-astra` + `low`, écarter le
+résultat comme non conforme et ne jamais annoncer une consultation ou une
+consommation Astra.
