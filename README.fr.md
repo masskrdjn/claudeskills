@@ -1,71 +1,219 @@
-# Routage multi-modèles sélectif pour Codex
+# Routage sélectif multi-modèles pour Claude Code
 
 [English](README.md)
 
-Une configuration Codex propre au projet qui confie le travail à des agents spécialisés uniquement lorsque la délégation devrait préserver la qualité tout en réduisant le coût total ou le délai. L’agent principal reste responsable des décisions, de l’intégration et de la communication avec l’utilisateur.
+Une configuration Claude Code à portée projet qui confie le travail à des rôles
+spécialisés uniquement quand la délégation préserve la qualité tout en réduisant
+le coût total ou le délai. L'agent principal reste responsable des décisions, de
+l'intégration et de la communication avec l'utilisateur.
 
 ## Politique de routage
 
-Priorités, dans l’ordre :
+Priorités, dans cet ordre :
 
 1. Préserver la qualité et la pertinence du résultat.
 2. Réduire le coût total, coordination et reprises comprises.
 3. Réduire le délai.
 
-Les petites tâches bornées restent à l’agent principal. La délégation est utilisée lorsqu’un rôle clairement défini peut effectuer un travail substantiel plus efficacement ou fournir une analyse indépendante utile.
+Un coût total plus bas obtenu avec davantage de tokens sur un palier moins cher
+est un bon échange. Une qualité dégradée ou un délai multiplié ne l'est pas.
 
-| Rôle | Modèle | Effort | Responsabilité |
-| --- | --- | --- | --- |
-| Principal | `gpt-5.6-sol` | `medium` | Triage, décisions, intégration et petites tâches locales |
-| `scout` | `gpt-5.6-luna` | `max` | Exploration en lecture seule du code et des journaux |
-| `researcher` | `gpt-5.6-luna` | `max` | Recherche externe à plusieurs sources |
-| `runner` | `gpt-5.6-luna` | `medium` | Validations longues et lots mécaniques conséquents |
-| `builder` | `gpt-5.6-terra` | `high` | Implémentation bornée avec validation ciblée |
-| `architect` | `gpt-6-astra` | `low` | Rares décisions d’architecture, strictement cadrées |
+Les tâches petites et bornées restent à l'agent principal. La délégation sert
+quand un rôle clairement cadré peut abattre un travail substantiel plus
+efficacement, ou apporter une analyse indépendante utile.
 
-Le sous-agent par défaut est Luna avec un effort `max`. Le nombre de threads enfants simultanés est limité à quatre par session.
+| Rôle | Modèle | Effort | $/1M entrée | $/1M sortie | Responsabilité |
+| --- | --- | --- | --- | --- | --- |
+| Principal | `opus` | `xhigh` | 5 | 25 | Triage, décisions, intégration, petites tâches locales |
+| `scout` | `sonnet` | `medium` | 2 | 10 | Exploration en lecture seule du code et des logs |
+| `researcher` | `sonnet` | `medium` | 2 | 10 | Recherche documentaire multi-sources |
+| `runner` | `haiku` | *(non supporté)* | 1 | 5 | Validations longues et lots mécaniques |
+| `builder` | `sonnet` | `xhigh` | 2 | 10 | Implémentation bornée avec validation ciblée |
+| `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` | 5 → 10 | 25 → 50 | Décisions d'architecture, rares et bornées |
+
+Trois choix méritent une justification :
+
+- **`runner` sur le palier le moins cher.** Le rôle exécute et rapporte, il ne
+  conçoit pas. Ses bornes — trois cycles correction/test, arrêt au premier signal
+  répété, deux tentatives sur un problème d'environnement — sont précisément ce
+  qui rend ce palier sûr ici. Haiku ne supporte pas `effort` : le champ est
+  volontairement absent de son rôle.
+- **`scout` et `researcher` n'y descendent pas.** Tous deux produisent des faits
+  que l'agent principal croira sans les revérifier ; un palier trop bas y produit
+  des affirmations assurées et fausses, dont la reprise coûte plus que
+  l'économie. Leur effort reste `medium` : leur travail est borné par les entrées
+  et sorties plus que par le raisonnement, et un effort plus bas consolide les
+  appels d'outils — moins cher et plus rapide, à qualité tenue.
+- **`builder` monte en effort plutôt qu'en palier.** L'effort est le premier
+  levier de qualité à l'intérieur d'un modèle ; `sonnet`/`xhigh` coûte deux fois
+  et demie moins que le palier au-dessus en `high`.
+
+Deux escalades, décidées explicitement et passées à l'invocation, sans modifier
+aucun fichier de rôle : `builder` vers `opus` pour une tâche exceptionnellement
+difficile, `architect` vers `fable` sur accès confirmé. Un problème
+d'environnement ne fait jamais monter d'un palier.
+
+## Accès à Fable 5.1
+
+Fable n'est pas accessible à tout le monde, et il coûte le double d'Opus. Selon
+le plan et le siège, son usage peut être débité en *usage credits* ; une session
+interactive demande alors un consentement avant de facturer, mais un lancement
+non interactif (`-p`) facture sans demander.
+
+La configuration ne met donc **jamais** `fable` dans un fichier de rôle.
+`architect` embarque `opus` en `xhigh` : il fonctionne sur tous les plans et ne
+bloque jamais une session. L'escalade vers Fable est dynamique et conditionnée.
+
+L'accès est **présumé indisponible**, et sa détermination est déterministe :
+
+```bash
+claude auth status --json
+```
+
+`apiProvider`, `authMethod` et `subscriptionType` suffisent à trancher dans la
+quasi-totalité des cas, complétés par `claude --version` (Fable 5.1 exige
+2.1.257 ou plus récent) et par `availableModels` s'il est défini. La table de
+décision complète est dans le skill. Une valeur de plan inconnue ne s'interprète
+pas : elle se demande.
+
+Disponible ne vaut pas autorisé pour autant. Sur abonnement, Fable peut être
+débité en usage credits — de l'argent en plus de l'abonnement. L'agent principal
+demande donc une fois avant la première consultation, en nommant le plan
+constaté et le surcoût, et consigne la réponse dans
+`.claude/settings.local.json` — gitignoré, donc propre à chaque poste.
+
+Sans accès ou sur refus, `architect` répond en Opus 5 `xhigh` et **annonce
+explicitement qu'il ne s'agit pas d'un avis Fable**. Après coup, le modèle
+effectif est vérifié dans le résultat d'appel (`resolvedModel`) : sans
+correspondance, le résultat est écarté comme non conforme.
 
 ## Structure du projet
 
 ```text
 .
-├── AGENTS.md
-├── .agents/skills/quota-orchestrator/SKILL.md
-└── .codex/
-    ├── config.toml
+├── CLAUDE.md
+├── extract_claude_jsonl.ps1
+├── test_extract_claude_jsonl.py
+└── .claude/
+    ├── settings.json
+    ├── skills/quota-orchestrator/SKILL.md
     └── agents/
-        ├── architect.toml
-        ├── builder.toml
-        ├── researcher.toml
-        ├── runner.toml
-        └── scout.toml
+        ├── architect.md
+        ├── builder.md
+        ├── researcher.md
+        ├── runner.md
+        └── scout.md
 ```
 
-- `AGENTS.md` définit les règles de routage et de sécurité du dépôt.
-- `quota-orchestrator` détermine si la délégation justifie son coût complet.
-- `.codex/config.toml` sélectionne le modèle principal et active le travail multi-agent.
-- `.codex/agents/*.toml` définit le modèle, les outils, les limites et le contrat de compte rendu de chaque rôle.
+- `CLAUDE.md` porte les règles de routage et de sécurité du dépôt.
+- `quota-orchestrator` décide si une délégation vaut son coût complet.
+- `.claude/settings.json` fixe les efforts par défaut et par modèle.
+- `.claude/agents/*.md` définit modèle, effort, outils, bornes et contrat de
+  rapport de chaque rôle.
+- `extract_claude_jsonl.ps1` mesure ce que tout cela consomme réellement.
 
 ## Utilisation
 
-1. Copiez ou fusionnez `AGENTS.md`, `.agents/` et `.codex/` à la racine du dépôt à configurer.
-2. Vérifiez les noms de modèles, la politique d’approbation, le mode du bac à sable et la limite de concurrence pour votre environnement.
-3. Accordez votre confiance au projet lorsque Codex le demande ; le fichier `.codex/config.toml` du projet n’est chargé que pour les projets approuvés.
-4. Démarrez une nouvelle tâche Codex depuis ce dépôt.
-5. Demandez à Codex de résumer ses instructions actives si vous souhaitez vérifier leur détection.
+### Héritage et précédence
 
-Codex détecte les instructions du dépôt dans `AGENTS.md`, les skills locaux dans `.agents/skills` et les agents personnalisés dans `.codex/agents`. Consultez la documentation officielle sur [AGENTS.md](https://developers.openai.com/codex/guides/agents-md), les [skills](https://developers.openai.com/codex/skills), les [sous-agents](https://developers.openai.com/codex/subagents) et la [configuration](https://developers.openai.com/codex/config-reference).
+Claude Code construit sa chaîne d'instructions, de la plus faible à la plus forte
+précédence : les instructions gérées par l'organisation, puis `~/.claude/CLAUDE.md`,
+puis le `CLAUDE.md` à la racine du dépôt, puis `CLAUDE.local.md`. Le `CLAUDE.md`
+d'un sous-dossier est chargé à la demande, quand Claude y travaille. La syntaxe
+`@chemin` importe un autre fichier ; les chemins relatifs se résolvent depuis le
+fichier qui importe, pas depuis le répertoire courant.
+
+Si votre projet a déjà un `CLAUDE.md`, **ne le remplacez pas** : gardez son
+contenu et ajoutez-y les règles de routage. Pour restreindre des instructions à
+un sous-dossier, placez-y un autre `CLAUDE.md`.
+
+Pour les réglages, `~/.claude/settings.json` fournit vos valeurs personnelles.
+`.claude/settings.json` du projet passe au-dessus, `.claude/settings.local.json`
+au-dessus encore, et les réglages gérés par l'organisation priment sur tout.
+
+### Installation
+
+1. Si le projet a déjà un `CLAUDE.md` ou un dossier `.claude/`, fusionnez plutôt
+   que d'écraser. Copiez ensuite `.claude/agents/` et `.claude/skills/`.
+2. Relisez les modèles, les efforts et les règles de permission pour votre
+   environnement, puis `/agents` pour confirmer que les cinq rôles sont vus avec
+   le bon modèle et le bon effort.
+3. Démarrez une nouvelle session depuis le dépôt pour que la chaîne
+   d'instructions soit reconstruite.
+4. Demandez à Claude de résumer ses instructions actives si vous voulez vérifier
+   la détection.
+
+Claude Code découvre les instructions de dépôt dans `CLAUDE.md`, les skills dans
+`.claude/skills`, les rôles dans `.claude/agents` et les réglages dans
+`.claude/settings.json`. Voir la documentation officielle :
+[CLAUDE.md](https://code.claude.com/docs/en/memory),
+[skills](https://code.claude.com/docs/en/skills),
+[sous-agents](https://code.claude.com/docs/en/sub-agents),
+[modèles](https://code.claude.com/docs/en/model-config),
+[réglages](https://code.claude.com/docs/en/settings).
+
+## Mesure
+
+Sans mesure, un gain est attendu, pas démontré. `extract_claude_jsonl.ps1` lit
+les transcripts JSONL de session et agrège tokens, durées et **coût en dollars**
+par modèle, par effort et par rôle.
+
+```powershell
+.\extract_claude_jsonl.ps1
+```
+
+Le rapport porte un champ `Complete`. Il ne vaut `true` qu'en l'absence de tout
+diagnostic. Un rapport incomplet a exactement le statut *non observable* : ses
+tokens, coûts et durées ne doivent jamais servir dans un ratio, une médiane, une
+comparaison ou une recommandation économique. Comparer au moins deux rapports
+complets, sinon conclure qu'aucune comparaison n'est possible.
+
+Le script lit deux niveaux : le transcript de la session pour l'agent principal,
+et `<session>/subagents/agent-*.jsonl` pour chaque rôle délégué. Cette seconde
+source est indispensable — le résultat de l'appel qui a lancé un sous-agent ne
+porte que son **tour final**, pas son cumul. S'y fier sous-compte massivement.
+Un sous-agent de fond est mesuré comme les autres ; ce qui rend un run non
+observable, c'est un transcript manquant, un modèle absent de la table de prix,
+ou une écriture de cache dont la durée de vie est inconnue.
+
+Autre piège, également corrigé : un même message apparaît une fois par bloc de
+contenu et son `usage` est **cumulatif**. Le script retient le maximum par
+identifiant de message ; retenir le premier perdrait la majeure partie des
+tokens de sortie.
+
+Une écriture de cache se tarife selon sa durée de vie : 1,25× l'entrée pour un
+cache de 5 minutes, **2× pour un cache d'une heure**. Claude Code utilise les
+deux dans une même session — typiquement 1 heure pour l'agent principal et
+5 minutes pour un sous-agent. Confondre les deux sous-estime la facture d'un
+tiers ; le script lit donc la ventilation par durée de vie, et refuse de chiffrer
+une écriture dont le TTL est inconnu.
+
+Les tarifs vivent dans une seule table en tête du script ; c'est le seul endroit
+à mettre à jour quand ils changent. `python test_extract_claude_jsonl.py` vérifie
+le contrat du script sur des transcripts synthétiques, sans aucun appel de modèle.
 
 ## Limites de sécurité
 
-- Ne jamais utiliser `--yolo` ni `--dangerously-bypass-approvals-and-sandbox`.
-- Les permissions imposées au parent pendant l’exécution s’appliquent aussi aux agents enfants.
-- Ne pas utiliser `architect` si ces permissions annulent ses restrictions de lecture seule.
-- `architect` n’explore pas, n’exécute aucune commande, ne modifie aucun fichier et ne délègue pas.
-- Les sous-agents restent dans leur rôle et n’effectuent pas eux-mêmes le routage.
+- Ne jamais lancer sous `--dangerously-skip-permissions` ni en mode
+  `bypassPermissions`.
+- Ne pas élargir les permissions de la session pour consulter `architect` ; si
+  ses restrictions ne tiennent plus, isoler la décision dans une autre session.
+- `architect` n'explore pas, n'exécute aucune commande, n'écrit aucun fichier et
+  ne délègue pas.
+- Les rôles restent dans leur périmètre et ne font pas de routage eux-mêmes :
+  `Agent` est absent de la liste d'outils de chacun, ce qui l'empêche
+  effectivement de déléguer.
 
 ## Personnalisation
 
-Modifiez `.codex/config.toml` pour changer le modèle principal, les valeurs par défaut ou la concurrence. Modifiez le fichier correspondant dans `.codex/agents/` pour changer un rôle. Conservez les limites des rôles et les noms de modèles synchronisés avec `AGENTS.md` et `quota-orchestrator/SKILL.md`.
+Modifiez `.claude/settings.json` pour les efforts par défaut, et le fichier
+correspondant sous `.claude/agents/` pour changer un rôle. Gardez modèles,
+efforts et frontières de rôle synchronisés entre `CLAUDE.md`,
+`quota-orchestrator/SKILL.md` et ce README.
 
-La disponibilité des modèles dépend de votre compte Codex et de votre environnement.
+Les paliers proposés ici sont défendables, pas mesurés sur votre travail. Le
+script de mesure existe précisément pour que vous les régliez sur vos propres
+tâches — et la doctrine interdit d'annoncer un gain démontré tant que deux runs
+complets ne le montrent pas.
+
+La disponibilité des modèles dépend de votre compte et de votre environnement.

@@ -1,13 +1,11 @@
-name = "builder"
-description = "Implémentation substantielle ou indépendante dont la délégation amortit la coordination. Les modifications locales bornées restent à la racine."
+---
+name: builder
+description: Implémentation substantielle ou indépendante dont la délégation amortit la coordination. Les modifications locales bornées restent à la racine.
+model: sonnet
+effort: xhigh
+tools: Read, Edit, Write, Grep, Glob, Bash
+---
 
-model = "gpt-5.6-terra"
-model_reasoning_effort = "medium"
-# `high` ou `xhigh` restent possibles pour une tâche exceptionnellement difficile, mais
-# c'est une décision explicite de l'orchestrateur, jamais le défaut.
-sandbox_mode = "workspace-write"
-
-developer_instructions = """
 Mission déjà attribuée : ne charge pas quota-orchestrator, ne refais pas
 le triage et ne délègue pas. Remonte à la racine les décisions nécessaires.
 Groupe les lectures indépendantes. Réutilise les faits d'environnement et
@@ -40,8 +38,3 @@ RAPPORT :
 2. Fichiers modifiés
 3. Validation effectuée : commande, code de sortie, fichiers testés et modifications ultérieures
 4. Risques restants ou décisions en suspens
-"""
-
-# La racine conserve la responsabilité du routage.
-[agents]
-enabled = false

@@ -1,4 +1,9 @@
-/extract_model_jsonl.ps1
 /rapport.md
 /tests-archive
-/test_extract_model_jsonl.py
+
+# Sorties de la suite de tests.
+/_smoketest_*.json
+/_temoin_scout.txt
+
+# Reponses locales au questionnaire d'acces modele, propres a chaque poste.
+.claude/settings.local.json
