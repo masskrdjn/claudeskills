@@ -132,11 +132,20 @@ above that, and organization-managed settings take precedence over everything.
 
 ### Installation
 
-1. If the project already has a `CLAUDE.md` or a `.claude/` directory, merge
-   rather than overwrite. Then copy `.claude/agents/` and `.claude/skills/`.
-2. Review the models, efforts, and permission rules for your environment, then
-   run `/agents` to confirm all five roles are seen with the right model and
-   effort.
+1. Requires Python 3.11 or newer. From this repository, run:
+
+   ```text
+   python install.py path/to/your/project
+   ```
+
+   Use `--dry-run` to preview every change. The installer appends the routing
+   rules to an existing `CLAUDE.md` between `claudeskills:routing` markers,
+   adds only the missing `.claude/settings.json` keys, backs up modified files
+   under `.claudeskills-backup/`, and warns instead of overwriting divergent
+   role or skill files.
+2. Review the warnings, then the models, efforts, and permission rules for your
+   environment, then run `/agents` to confirm all five roles are seen with the
+   right model and effort.
 3. Start a new session from the repository so the instruction chain is rebuilt.
 4. Ask Claude to summarize its active instructions if you want to verify
    discovery.

@@ -133,11 +133,21 @@ au-dessus encore, et les réglages gérés par l'organisation priment sur tout.
 
 ### Installation
 
-1. Si le projet a déjà un `CLAUDE.md` ou un dossier `.claude/`, fusionnez plutôt
-   que d'écraser. Copiez ensuite `.claude/agents/` et `.claude/skills/`.
-2. Relisez les modèles, les efforts et les règles de permission pour votre
-   environnement, puis `/agents` pour confirmer que les cinq rôles sont vus avec
-   le bon modèle et le bon effort.
+1. Python 3.11 ou plus récent est requis. Depuis ce dépôt, lancez :
+
+   ```text
+   python install.py chemin/vers/votre/projet
+   ```
+
+   `--dry-run` affiche le plan sans rien écrire. L'installateur ajoute les
+   règles de routage à un `CLAUDE.md` existant entre des marqueurs
+   `claudeskills:routing`, n'ajoute que les clés manquantes de
+   `.claude/settings.json`, sauvegarde les fichiers modifiés sous
+   `.claudeskills-backup/`, et avertit au lieu d'écraser un fichier de rôle ou
+   de skill divergent.
+2. Relisez les avertissements, puis les modèles, les efforts et les règles de
+   permission pour votre environnement, puis `/agents` pour confirmer que les
+   cinq rôles sont vus avec le bon modèle et le bon effort.
 3. Démarrez une nouvelle session depuis le dépôt pour que la chaîne
    d'instructions soit reconstruite.
 4. Demandez à Claude de résumer ses instructions actives si vous voulez vérifier

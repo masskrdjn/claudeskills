@@ -4,6 +4,7 @@
 # Sorties de la suite de tests.
 /_smoketest_*.json
 /_temoin_scout.txt
+__pycache__/
 
 # Reponses locales au questionnaire d'acces modele, propres a chaque poste.
 .claude/settings.local.json
