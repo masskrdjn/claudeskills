@@ -67,8 +67,9 @@ prose, qui empêche un rôle en lecture seule d'écrire ou de déléguer.
 
 Deux escalades seulement, décidées explicitement par la racine et passées à
 l'invocation, sans modifier aucun fichier de rôle : `builder` vers `opus` pour
-une tâche exceptionnellement difficile, `architect` vers `fable` sur accès
-confirmé. Un problème d'environnement ne fait jamais monter d'un palier.
+une tâche difficile, `architect` vers `fable` sur accès confirmé, en second
+appel lorsque l'avis Opus 5.5 laisse une contradiction décisive. Un problème
+d'environnement ne fait jamais monter d'un palier.
 
 La racine ne lance pas quatre sous-agents coûteux en parallèle. Le parallélisme
 suppose des sous-agents majoritairement sur les paliers bas, et ne dispense pas

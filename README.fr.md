@@ -24,12 +24,16 @@ efficacement, ou apporter une analyse indépendante utile.
 
 | Rôle | Modèle | Effort | $/1M entrée | $/1M sortie | Responsabilité |
 | --- | --- | --- | --- | --- | --- |
-| Principal | `opus` | `xhigh` | 5 | 25 | Triage, décisions, intégration, petites tâches locales |
+| Principal | `opus` | `xhigh` | 4 | 20 | Triage, décisions, intégration, petites tâches locales |
 | `scout` | `sonnet` | `medium` | 2 | 10 | Exploration en lecture seule du code et des logs |
 | `researcher` | `sonnet` | `medium` | 2 | 10 | Recherche documentaire multi-sources |
 | `runner` | `haiku` | *(non supporté)* | 1 | 5 | Validations longues et lots mécaniques |
 | `builder` | `sonnet` | `xhigh` | 2 | 10 | Implémentation bornée avec validation ciblée |
-| `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` | 5 → 10 | 25 → 50 | Décisions d'architecture, rares et bornées |
+| `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` | 4 → 10 | 20 → 50 | Décisions d'architecture, rares et bornées |
+
+`opus` désigne Opus 5.5 sur l'API Anthropic et les abonnements, ce qui exige
+Claude Code 2.1.280 ou plus récent ; un CLI plus ancien ou un autre fournisseur
+sert un autre modèle.
 
 Trois choix méritent une justification :
 
@@ -46,16 +50,18 @@ Trois choix méritent une justification :
   appels d'outils — moins cher et plus rapide, à qualité tenue.
 - **`builder` monte en effort plutôt qu'en palier.** L'effort est le premier
   levier de qualité à l'intérieur d'un modèle ; `sonnet`/`xhigh` coûte deux fois
-  et demie moins que le palier au-dessus en `high`.
+  moins que le palier au-dessus en entrée et en sortie, et autant en lecture de
+  cache.
 
 Deux escalades, décidées explicitement et passées à l'invocation, sans modifier
-aucun fichier de rôle : `builder` vers `opus` pour une tâche exceptionnellement
-difficile, `architect` vers `fable` sur accès confirmé. Un problème
-d'environnement ne fait jamais monter d'un palier.
+aucun fichier de rôle : `builder` vers `opus` pour une tâche difficile,
+`architect` vers `fable` sur accès confirmé, en second appel lorsque l'avis
+Opus 5.5 laisse une contradiction décisive. Un problème d'environnement ne fait
+jamais monter d'un palier.
 
 ## Accès à Fable 5.1
 
-Fable n'est pas accessible à tout le monde, et il coûte le double d'Opus. Selon
+Fable n'est pas accessible à tout le monde, et il coûte deux fois et demie Opus 5.5. Selon
 le plan et le siège, son usage peut être débité en *usage credits* ; une session
 interactive demande alors un consentement avant de facturer, mais un lancement
 non interactif (`-p`) facture sans demander.
@@ -82,7 +88,7 @@ demande donc une fois avant la première consultation, en nommant le plan
 constaté et le surcoût, et consigne la réponse dans
 `.claude/settings.local.json` — gitignoré, donc propre à chaque poste.
 
-Sans accès ou sur refus, `architect` répond en Opus 5 `xhigh` et **annonce
+Sans accès ou sur refus, `architect` répond en Opus 5.5 `xhigh` et **annonce
 explicitement qu'il ne s'agit pas d'un avis Fable**. Après coup, le modèle
 effectif est vérifié dans le résultat d'appel (`resolvedModel`) : sans
 correspondance, le résultat est écarté comme non conforme.

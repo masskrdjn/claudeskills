@@ -24,12 +24,16 @@ useful independent analysis.
 
 | Role | Model | Effort | $/1M in | $/1M out | Responsibility |
 | --- | --- | --- | --- | --- | --- |
-| Primary | `opus` | `xhigh` | 5 | 25 | Triage, decisions, integration, small local tasks |
+| Primary | `opus` | `xhigh` | 4 | 20 | Triage, decisions, integration, small local tasks |
 | `scout` | `sonnet` | `medium` | 2 | 10 | Read-only codebase and log exploration |
 | `researcher` | `sonnet` | `medium` | 2 | 10 | Multi-source external research |
 | `runner` | `haiku` | *(unsupported)* | 1 | 5 | Long validations and large mechanical batches |
 | `builder` | `sonnet` | `xhigh` | 2 | 10 | Scoped implementation with targeted validation |
-| `architect` | `opus`, or `fable` on confirmed access | `xhigh` | 5 → 10 | 25 → 50 | Rare, bounded architecture decisions only |
+| `architect` | `opus`, or `fable` on confirmed access | `xhigh` | 4 → 10 | 20 → 50 | Rare, bounded architecture decisions only |
+
+`opus` means Opus 5.5 on the Anthropic API and subscriptions, which requires
+Claude Code 2.1.280 or newer; an older CLI or another provider serves a
+different model.
 
 Three choices deserve a justification:
 
@@ -45,17 +49,17 @@ Three choices deserve a justification:
   reasoning, and lower effort consolidates tool calls — cheaper and faster at
   equal quality.
 - **`builder` raises effort rather than tier.** Effort is the first quality
-  lever within a model; `sonnet`/`xhigh` costs two and a half times less than
-  the tier above at `high`.
+  lever within a model; `sonnet`/`xhigh` costs half as much as the tier above
+  for input and output, and the same for cache reads.
 
 Two escalations exist, decided explicitly and passed at invocation without
-editing any role file: `builder` to `opus` for an exceptionally hard task, and
-`architect` to `fable` on confirmed access. An environment problem never raises
-a tier.
+editing any role file: `builder` to `opus` for a hard task, and `architect` to
+`fable` on confirmed access, as a second call when the Opus 5.5 opinion leaves
+a decisive contradiction. An environment problem never raises a tier.
 
 ## Claude Fable 5.1 access
 
-Fable is not available to everyone, and it costs twice what Opus does. Depending
+Fable is not available to everyone, and it costs two and a half times what Opus 5.5 does. Depending
 on plan and seat, its usage may be billed to *usage credits*; an interactive
 session then asks for consent before billing, while a non-interactive run (`-p`)
 bills without asking.
@@ -81,7 +85,7 @@ before the first consultation, naming the detected plan and the premium, and
 records the answer in `.claude/settings.local.json` — gitignored, so it stays
 per-machine.
 
-Without access, or on refusal, `architect` answers on Opus 5 at `xhigh` and
+Without access, or on refusal, `architect` answers on Opus 5.5 at `xhigh` and
 **says explicitly that this is not a Fable opinion**. Afterwards the effective
 model is checked in the call result (`resolvedModel`); without a match, the
 result is discarded as non-conforming.

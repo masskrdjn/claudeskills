@@ -77,12 +77,17 @@ dépendant ; ne pas inventer du travail parallèle ni dupliquer celui de l'enfan
 
 | Rôle | Modèle | Effort | $/1M entrée | $/1M sortie |
 |---|---|---|---|---|
-| Racine | `opus` — `claude-opus-5` | `xhigh` | 5 | 25 |
+| Racine | `opus` — `claude-opus-5-5` | `xhigh` | 4 | 20 |
 | `scout` | `sonnet` — `claude-sonnet-5` | `medium` | 2 | 10 |
 | `researcher` | `sonnet` — `claude-sonnet-5` | `medium` | 2 | 10 |
 | `runner` | `haiku` — `claude-haiku-4-5` | *(non supporté)* | 1 | 5 |
 | `builder` | `sonnet` — `claude-sonnet-5` | `xhigh` | 2 | 10 |
-| `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` | 5 → 10 | 25 → 50 |
+| `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` | 4 → 10 | 20 → 50 |
+
+`opus` désigne Opus 5.5 sur l'API Anthropic et les abonnements à partir de
+Claude Code 2.1.280 ; un CLI plus ancien ou un autre fournisseur sert un autre
+modèle, et `resolvedModel` fait foi. L'effort par défaut d'Opus 5.5 est
+`medium`, mais chaque rôle fixe le sien.
 
 `runner` tourne sur le palier le moins cher parce qu'il exécute et rapporte sans
 concevoir, et parce que ses bornes — trois cycles, règle du signal nouveau, deux
@@ -98,20 +103,26 @@ d'outils — moins cher et plus rapide à qualité tenue.
 
 `builder` reste sur le palier intermédiaire en `xhigh` plutôt que de monter d'un
 palier en `high` : l'effort est le premier levier de qualité à l'intérieur d'un
-modèle, avant le changement de palier, et il coûte ici deux fois et demie moins.
+modèle, avant le changement de palier, et il coûte ici deux fois moins en
+entrée et en sortie (même prix en lecture de cache).
 
 Deux escalades existent, par le paramètre de modèle à l'invocation, qui prime
 sur le rôle. Aucune ne demande de modifier un fichier :
 
-- `builder` → `opus`, pour une tâche exceptionnellement difficile ;
-- `architect` → `fable`, sur accès confirmé seulement.
+- `builder` → `opus`, pour une tâche difficile : invariants subtils, couplage
+  entre plusieurs modules, ou premier échec porteur d'un signal conceptuel.
+  Opus 5.5 ne coûte que deux fois Sonnet 5, et autant en lecture de cache ;
+- `architect` → `fable`, sur accès confirmé seulement, en second appel : quand
+  l'avis Opus 5.5 laisse une contradiction technique décisive. Directement
+  seulement si une erreur de décision coûterait exceptionnellement cher.
 
 Chacune est une décision explicite, annoncée et motivée, jamais un défaut.
 Ne jamais monter d'un palier pour un problème d'environnement.
 
 ## Accès Fable
 
-Fable est le palier le plus cher : deux fois Opus en entrée comme en sortie, et
+Fable est le palier le plus cher : deux fois et demie Opus 5.5 en entrée comme
+en sortie, et
 des tours sensiblement plus longs. Il est donc doublement budgété — pour le
 coût et pour le délai.
 
@@ -142,7 +153,7 @@ s'interprète pas, elle se demande.
 **Disponible ne vaut pas autorisé.** Sur abonnement, une requête Fable peut
 débiter des usage credits, c'est-à-dire de l'argent en plus de l'abonnement.
 Demander donc une fois, avant la première consultation Fable, en nommant le plan
-constaté et le surcoût (10/50 contre 5/25, le double d'Opus). Consigner la
+constaté et le surcoût (10/50 contre 4/20, deux fois et demie Opus 5.5). Consigner la
 réponse dans `.claude/settings.local.json` pour ne pas redemander.
 En mode non interactif (`-p`) et via le SDK, Claude Code débite **sans**
 demander de consentement : ne jamais y escalader vers Fable sans une
@@ -150,7 +161,7 @@ autorisation explicite obtenue au préalable.
 
 Sans accès, sur refus, ou faute de pouvoir trancher : consulter `architect` tel
 qu'il est défini, en Opus `xhigh`, et **annoncer explicitement qu'il s'agit d'un
-avis Opus 5, pas Fable**. Ne jamais présenter un repli comme une consultation
+avis Opus 5.5, pas Fable**. Ne jamais présenter un repli comme une consultation
 Fable.
 
 **Preuve après coup.** Le résultat d'un appel de sous-agent porte `agentType`,
