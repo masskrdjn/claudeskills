@@ -2,8 +2,8 @@
 
 [Français](README.fr.md)
 
-A project-scoped Claude Code configuration that hands work to specialized roles
-only when delegation preserves quality while reducing total cost or latency. The
+A Claude Code configuration, installable as a plugin or per project, that
+hands work to specialized roles only when delegation preserves quality while reducing total cost or latency. The
 primary agent stays responsible for decisions, integration, and user
 communication.
 
@@ -97,6 +97,10 @@ result is discarded as non-conforming.
 ├── CLAUDE.md
 ├── extract_claude_jsonl.ps1
 ├── test_extract_claude_jsonl.py
+├── test_plugin.py
+├── .claude-plugin/
+│   ├── marketplace.json
+│   └── plugin.json
 └── .claude/
     ├── settings.json
     ├── skills/quota-orchestrator/SKILL.md
@@ -113,6 +117,8 @@ result is discarded as non-conforming.
 - `.claude/settings.json` sets default and per-model effort.
 - `.claude/agents/*.md` defines each role's model, effort, tools, bounds, and
   reporting contract.
+- `.claude-plugin/` turns the repository into a plugin marketplace that reuses
+  these same files.
 - `extract_claude_jsonl.ps1` measures what all of it actually consumes.
 
 ## Usage
@@ -134,7 +140,47 @@ For settings, `~/.claude/settings.json` provides your personal values. The
 project's `.claude/settings.json` sits above it, `.claude/settings.local.json`
 above that, and organization-managed settings take precedence over everything.
 
-### Installation
+### Install as a plugin
+
+The repository is also a Claude Code plugin marketplace. The plugin ships the
+five roles, the `quota-orchestrator` skill, and a `SessionStart` hook that
+loads `CLAUDE.md` into the primary agent's context at startup, resume, `/clear`,
+and compaction. Subagents do not receive it, consistent with the rule that they
+do not route.
+
+From the CLI:
+
+```bash
+claude plugin marketplace add masskrdjn/claudeskills
+```
+
+```bash
+claude plugin install claudeskills@claudeskills
+```
+
+From a local checkout, `claude plugin marketplace add .` replaces the first
+command, and `claude --plugin-dir .` loads the plugin for a single session
+without installing it. In the desktop app (Code tab), click **+** next to the
+prompt box, then **Plugins** → **Add plugin**, and pick `claudeskills` once the
+marketplace is known; a user-scope install from the CLI is also available in
+the app's local sessions. Start a new session, or run `/reload-plugins`,
+afterwards.
+
+Things to know:
+
+- Plugin components are namespaced: the roles appear as `claudeskills:scout`
+  and so on, the skill as `claudeskills:quota-orchestrator`. A project or user
+  agent with the same short name takes precedence over the plugin's.
+- The hook runs `cat`, so it needs a POSIX shell: Git Bash on Windows.
+- A plugin cannot ship settings. Choose `opus` and `xhigh` with `/model` and
+  `/effort`, or copy `effortLevel`, `modelSettings`, and `permissions.deny` from
+  this repository's `.claude/settings.json` into `~/.claude/settings.json`.
+- Do not combine the plugin with `install.py` in the same project: the rules
+  would load twice and the project's roles would shadow the plugin's.
+- The manifest deliberately sets no `version`, which would pin the plugin to
+  that string; `claude plugin validate .` reports this as its only warning.
+
+### Install into a project
 
 1. Requires Python 3.11 or newer. From this repository, run:
 
@@ -215,6 +261,8 @@ script's contract against synthetic transcripts, with no model calls.
 Edit `.claude/settings.json` for default efforts, and the matching file under
 `.claude/agents/` to change a role. Keep models, efforts, and role boundaries
 synchronized across `CLAUDE.md`, `quota-orchestrator/SKILL.md`, and this README.
+A new role must also be listed under `agents` in `.claude-plugin/plugin.json`;
+`python test_plugin.py` checks the manifests against the repository.
 
 The tiers proposed here are defensible, not measured on your work. The
 measurement script exists precisely so you can tune them on your own tasks — and

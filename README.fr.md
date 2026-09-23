@@ -2,8 +2,8 @@
 
 [English](README.md)
 
-Une configuration Claude Code à portée projet qui confie le travail à des rôles
-spécialisés uniquement quand la délégation préserve la qualité tout en réduisant
+Une configuration Claude Code, installable en plugin ou par projet, qui confie
+le travail à des rôles spécialisés uniquement quand la délégation préserve la qualité tout en réduisant
 le coût total ou le délai. L'agent principal reste responsable des décisions, de
 l'intégration et de la communication avec l'utilisateur.
 
@@ -100,6 +100,10 @@ correspondance, le résultat est écarté comme non conforme.
 ├── CLAUDE.md
 ├── extract_claude_jsonl.ps1
 ├── test_extract_claude_jsonl.py
+├── test_plugin.py
+├── .claude-plugin/
+│   ├── marketplace.json
+│   └── plugin.json
 └── .claude/
     ├── settings.json
     ├── skills/quota-orchestrator/SKILL.md
@@ -116,6 +120,8 @@ correspondance, le résultat est écarté comme non conforme.
 - `.claude/settings.json` fixe les efforts par défaut et par modèle.
 - `.claude/agents/*.md` définit modèle, effort, outils, bornes et contrat de
   rapport de chaque rôle.
+- `.claude-plugin/` fait du dépôt une marketplace de plugin qui réutilise ces
+  mêmes fichiers.
 - `extract_claude_jsonl.ps1` mesure ce que tout cela consomme réellement.
 
 ## Utilisation
@@ -137,7 +143,51 @@ Pour les réglages, `~/.claude/settings.json` fournit vos valeurs personnelles.
 `.claude/settings.json` du projet passe au-dessus, `.claude/settings.local.json`
 au-dessus encore, et les réglages gérés par l'organisation priment sur tout.
 
-### Installation
+### Installer comme plugin
+
+Le dépôt est aussi une marketplace de plugins Claude Code. Le plugin fournit les
+cinq rôles, la skill `quota-orchestrator` et un hook `SessionStart` qui charge
+`CLAUDE.md` dans le contexte de l'agent principal au démarrage, à la reprise,
+après `/clear` et après compactage. Les sous-agents ne le reçoivent pas, ce qui
+est cohérent avec la règle qui leur interdit de router.
+
+Depuis le CLI :
+
+```bash
+claude plugin marketplace add masskrdjn/claudeskills
+```
+
+```bash
+claude plugin install claudeskills@claudeskills
+```
+
+Depuis un checkout local, `claude plugin marketplace add .` remplace la première
+commande, et `claude --plugin-dir .` charge le plugin pour une seule session
+sans l'installer. Dans l'application desktop (onglet Code), cliquez sur **+** à
+côté de la zone de saisie, puis **Plugins** → **Add plugin**, et choisissez
+`claudeskills` une fois la marketplace connue ; une installation en portée
+utilisateur faite depuis le CLI est aussi disponible dans les sessions locales
+de l'application. Ouvrez ensuite une nouvelle session, ou lancez
+`/reload-plugins`.
+
+À savoir :
+
+- Les composants du plugin sont préfixés : les rôles apparaissent comme
+  `claudeskills:scout` et ainsi de suite, la skill comme
+  `claudeskills:quota-orchestrator`. Un agent projet ou utilisateur de même nom
+  court prime sur celui du plugin.
+- Le hook exécute `cat` et demande donc un shell POSIX : Git Bash sous Windows.
+- Un plugin ne peut pas fournir de réglages. Choisissez `opus` et `xhigh` avec
+  `/model` et `/effort`, ou copiez `effortLevel`, `modelSettings` et
+  `permissions.deny` depuis le `.claude/settings.json` de ce dépôt vers
+  `~/.claude/settings.json`.
+- Ne cumulez pas le plugin et `install.py` sur un même projet : les règles
+  seraient chargées deux fois et les rôles du projet masqueraient ceux du plugin.
+- Le manifeste ne fixe volontairement aucune `version`, qui figerait le plugin
+  sur cette valeur ; `claude plugin validate .` le signale comme unique
+  avertissement.
+
+### Installer dans un projet
 
 1. Python 3.11 ou plus récent est requis. Depuis ce dépôt, lancez :
 
@@ -225,7 +275,9 @@ le contrat du script sur des transcripts synthétiques, sans aucun appel de mod�
 Modifiez `.claude/settings.json` pour les efforts par défaut, et le fichier
 correspondant sous `.claude/agents/` pour changer un rôle. Gardez modèles,
 efforts et frontières de rôle synchronisés entre `CLAUDE.md`,
-`quota-orchestrator/SKILL.md` et ce README.
+`quota-orchestrator/SKILL.md` et ce README. Un nouveau rôle doit aussi figurer
+sous `agents` dans `.claude-plugin/plugin.json` ; `python test_plugin.py`
+vérifie les manifestes par rapport au dépôt.
 
 Les paliers proposés ici sont défendables, pas mesurés sur votre travail. Le
 script de mesure existe précisément pour que vous les régliez sur vos propres

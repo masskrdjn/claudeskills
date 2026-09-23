@@ -1,0 +1,37 @@
+{
+  "name": "claudeskills",
+  "description": "Selective multi-model routing for Claude Code: scout, researcher, runner, builder and architect roles, the quota-orchestrator skill, and routing rules loaded at session start.",
+  "author": {
+    "name": "masskrdjn",
+    "url": "https://github.com/masskrdjn"
+  },
+  "homepage": "https://github.com/masskrdjn/claudeskills",
+  "repository": "https://github.com/masskrdjn/claudeskills",
+  "keywords": [
+    "claude-code",
+    "routing",
+    "subagents",
+    "cost-optimization"
+  ],
+  "agents": [
+    "./.claude/agents/architect.md",
+    "./.claude/agents/builder.md",
+    "./.claude/agents/researcher.md",
+    "./.claude/agents/runner.md",
+    "./.claude/agents/scout.md"
+  ],
+  "skills": "./.claude/skills/",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"${CLAUDE_PLUGIN_ROOT}/CLAUDE.md\""
+          }
+        ]
+      }
+    ]
+  }
+}

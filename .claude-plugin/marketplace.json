@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claudeskills",
+  "description": "Selective multi-model routing for Claude Code.",
+  "owner": {
+    "name": "masskrdjn",
+    "url": "https://github.com/masskrdjn"
+  },
+  "plugins": [
+    {
+      "name": "claudeskills",
+      "description": "Five routing roles, the quota-orchestrator skill, and routing rules loaded at session start.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
