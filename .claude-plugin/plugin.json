@@ -7,6 +7,7 @@
   },
   "homepage": "https://github.com/masskrdjn/claudeskills",
   "repository": "https://github.com/masskrdjn/claudeskills",
+  "version": "0.1.0",
   "keywords": [
     "claude-code",
     "routing",
