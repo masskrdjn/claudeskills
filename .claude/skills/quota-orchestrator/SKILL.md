@@ -78,16 +78,26 @@ dépendant ; ne pas inventer du travail parallèle ni dupliquer celui de l'enfan
 | Rôle | Modèle | Effort | $/1M entrée | $/1M sortie |
 |---|---|---|---|---|
 | Racine | `opus` — `claude-opus-5-5` | `xhigh` | 4 | 20 |
-| `scout` | `sonnet` — `claude-sonnet-5` | `medium` | 2 | 10 |
-| `researcher` | `sonnet` — `claude-sonnet-5` | `medium` | 2 | 10 |
+| `scout` | `sonnet` — `claude-sonnet-5-5` | `medium` | 2 | 10 |
+| `researcher` | `sonnet` — `claude-sonnet-5-5` | `medium` | 2 | 10 |
 | `runner` | `haiku` — `claude-haiku-4-5` | *(non supporté)* | 1 | 5 |
-| `builder` | `sonnet` — `claude-sonnet-5` | `xhigh` | 2 | 10 |
+| `builder` | `sonnet` — `claude-sonnet-5-5` | `high` | 2 | 10 |
 | `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` | 4 → 10 | 20 → 50 |
 
 `opus` désigne Opus 5.5 sur l'API Anthropic et les abonnements à partir de
 Claude Code 2.1.280 ; un CLI plus ancien ou un autre fournisseur sert un autre
 modèle, et `resolvedModel` fait foi. L'effort par défaut d'Opus 5.5 est
 `medium`, mais chaque rôle fixe le sien.
+
+`sonnet` désigne Sonnet 5.5 sur l'API Anthropic à partir de Claude Code
+2.1.284 ; selon la documentation, l'alias résout vers un Sonnet plus ancien
+sur Bedrock, Vertex, Foundry et Claude Platform on AWS. Les niveaux d'effort
+de Sonnet 5.5 sont recalibrés par rapport à Sonnet 5 : un niveau ne produit pas
+le même raisonnement, et la documentation demande de refaire un balayage
+d'évals plutôt que de reporter un réglage. Elle recommande `medium` pour
+l'agentique bien spécifié, `high` pour le plus dur, et `xhigh`/`max`
+seulement là où des évals montrent un gain. Le défaut est `high` sur l'API et
+`medium` dans Claude Code : chaque rôle fixe donc son effort.
 
 `runner` tourne sur le palier le moins cher parce qu'il exécute et rapporte sans
 concevoir, et parce que ses bornes — trois cycles, règle du signal nouveau, deux
@@ -101,17 +111,21 @@ Leur effort reste `medium` : leur travail est borné par les entrées et sorties
 plus que par le raisonnement, et un effort plus bas consolide les appels
 d'outils — moins cher et plus rapide à qualité tenue.
 
-`builder` reste sur le palier intermédiaire en `xhigh` plutôt que de monter d'un
-palier en `high` : l'effort est le premier levier de qualité à l'intérieur d'un
-modèle, avant le changement de palier, et il coûte ici deux fois moins en
-entrée et en sortie (même prix en lecture de cache).
+`builder` reste sur le palier intermédiaire en `high` plutôt que de monter d'un
+palier : l'effort est le premier levier de qualité à l'intérieur d'un modèle,
+avant le changement de palier, et Sonnet 5.5 coûte deux fois moins en entrée et
+en sortie (même prix en lecture de cache). `xhigh` n'est pas le défaut : la
+documentation le réserve aux tâches longues à budget de tokens très large et
+aux cas où des évals montrent un gain, ce que les tâches bornées de `builder`
+(trois tentatives) ne sont pas. Passer `builder` en `xhigh` seulement sur
+mesure, run complet à l'appui.
 
 Deux escalades existent, par le paramètre de modèle à l'invocation, qui prime
 sur le rôle. Aucune ne demande de modifier un fichier :
 
 - `builder` → `opus`, pour une tâche difficile : invariants subtils, couplage
   entre plusieurs modules, ou premier échec porteur d'un signal conceptuel.
-  Opus 5.5 ne coûte que deux fois Sonnet 5, et autant en lecture de cache ;
+  Opus 5.5 ne coûte que deux fois Sonnet 5.5, et autant en lecture de cache ;
 - `architect` → `fable`, sur accès confirmé seulement, en second appel : quand
   l'avis Opus 5.5 laisse une contradiction technique décisive. Directement
   seulement si une erreur de décision coûterait exceptionnellement cher.

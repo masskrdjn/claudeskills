@@ -2,7 +2,7 @@
 name: builder
 description: Implémentation substantielle ou indépendante dont la délégation amortit la coordination. Les modifications locales bornées restent à la racine.
 model: sonnet
-effort: xhigh
+effort: high
 tools: Read, Edit, Write, Grep, Glob, Bash
 ---
 

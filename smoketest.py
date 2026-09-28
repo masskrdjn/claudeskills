@@ -252,7 +252,8 @@ def t_tarifs_coherents():
             r"CacheWrite1h\s*=\s*([\d.]+);\s*CacheRead\s*=\s*([\d.]+)", ps):
         table[m.group(1)] = tuple(float(g) for g in m.groups()[1:])
     assert table, "table de prix introuvable dans le script"
-    expected = {"claude-opus-5": (5.0, 25.0), "claude-sonnet-5": (2.0, 10.0),
+    expected = {"claude-opus-5-5": (4.0, 20.0), "claude-opus-5": (5.0, 25.0),
+                "claude-sonnet-5-5": (2.0, 10.0), "claude-sonnet-5": (2.0, 10.0),
                 "claude-haiku-4-5": (1.0, 5.0), "claude-fable-5-1": (10.0, 50.0)}
     for model, price in expected.items():
         got = table.get(model)
@@ -380,11 +381,17 @@ def t_version_claude_code():
     m = re.search(r"(\d+)\.(\d+)\.(\d+)", proc.stdout)
     assert m, "version illisible : %s" % proc.stdout
     version = tuple(int(x) for x in m.groups())
-    # Le support de Fable 5.1 demande 2.1.257 ou plus recent.
+    # Le support de Fable 5.1 demande 2.1.257 ou plus recent, Opus 5.5 2.1.280, Sonnet 5.5 2.1.284.
     if version < (2, 1, 257):
         return ("v%d.%d.%d - sous le prerequis Fable 5.1 (2.1.257) : "
                 "l'escalade architect->fable ne peut pas aboutir ici" % version)
-    return "v%d.%d.%d - Fable 5.1 supporte" % version
+    if version < (2, 1, 280):
+        return ("v%d.%d.%d - sous le prerequis Opus 5.5 (2.1.280) : "
+                "'opus' ne sert pas Opus 5.5 ici" % version)
+    if version < (2, 1, 284):
+        return ("v%d.%d.%d - sous le prerequis Sonnet 5.5 (2.1.284) : "
+                "'sonnet' ne sert pas Sonnet 5.5 ici" % version)
+    return "v%d.%d.%d - Fable 5.1, Opus 5.5 et Sonnet 5.5 supportes" % version
 
 
 if __name__ == "__main__":

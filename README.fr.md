@@ -28,12 +28,16 @@ efficacement, ou apporter une analyse indépendante utile.
 | `scout` | `sonnet` | `medium` | 2 | 10 | Exploration en lecture seule du code et des logs |
 | `researcher` | `sonnet` | `medium` | 2 | 10 | Recherche documentaire multi-sources |
 | `runner` | `haiku` | *(non supporté)* | 1 | 5 | Validations longues et lots mécaniques |
-| `builder` | `sonnet` | `xhigh` | 2 | 10 | Implémentation bornée avec validation ciblée |
+| `builder` | `sonnet` | `high` | 2 | 10 | Implémentation bornée avec validation ciblée |
 | `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` | 4 → 10 | 20 → 50 | Décisions d'architecture, rares et bornées |
 
 `opus` désigne Opus 5.5 sur l'API Anthropic et les abonnements, ce qui exige
 Claude Code 2.1.280 ou plus récent ; un CLI plus ancien ou un autre fournisseur
-sert un autre modèle.
+sert un autre modèle. `sonnet` désigne Sonnet 5.5 sur l'API Anthropic à partir de
+Claude Code 2.1.284 ; selon la documentation, il résout vers un Sonnet plus
+ancien sur Bedrock, Vertex, Foundry et Claude Platform on AWS. Les niveaux
+d'effort de Sonnet 5.5 sont recalibrés par rapport à Sonnet 5 : les réglages ont
+été rechoisis d'après les recommandations officielles, pas reportés.
 
 Trois choix méritent une justification :
 
@@ -48,10 +52,14 @@ Trois choix méritent une justification :
   l'économie. Leur effort reste `medium` : leur travail est borné par les entrées
   et sorties plus que par le raisonnement, et un effort plus bas consolide les
   appels d'outils — moins cher et plus rapide, à qualité tenue.
-- **`builder` monte en effort plutôt qu'en palier.** L'effort est le premier
-  levier de qualité à l'intérieur d'un modèle ; `sonnet`/`xhigh` coûte deux fois
-  moins que le palier au-dessus en entrée et en sortie, et autant en lecture de
-  cache.
+- **`builder` monte en effort plutôt qu'en palier, mais s'arrête à `high`.**
+  L'effort est le premier levier de qualité à l'intérieur d'un modèle ;
+  `sonnet`/`high` coûte deux fois moins que le palier au-dessus en entrée et en
+  sortie, et autant en lecture de cache. `xhigh` n'est pas le défaut : la
+  documentation le réserve aux tâches longues à très gros budget de tokens et
+  aux cas où des évals montrent un gain, ce que les tâches bornées de `builder`
+  (trois tentatives) ne sont pas. Ne le passer en `xhigh` que sur mesure, à
+  partir de runs complets.
 
 Deux escalades, décidées explicitement et passées à l'invocation, sans modifier
 aucun fichier de rôle : `builder` vers `opus` pour une tâche difficile,

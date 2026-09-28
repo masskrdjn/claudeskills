@@ -288,6 +288,23 @@ def test_identifiant_date_apparie_par_prefixe():
     assert abs(bucket(report, "racine")["CostUsd"] - 0.035) < 1e-9
 
 
+def test_opus_5_5_n_herite_pas_du_prix_d_opus_5():
+    """claude-opus-5 est un prefixe de claude-opus-5-5 : le plus long gagne."""
+    report = run([turn("claude-opus-5-5", "m1", 1000, 1000, 0, 1000000)])
+    assert report["Complete"] is True, report["Diagnostics"]
+    # 1000/1e6*4 + 1000/1e6*20 + 1e6/1e6*0.20 ; au prix d'Opus 5 : 0.53
+    assert abs(bucket(report, "racine")["CostUsd"] - 0.224) < 1e-9
+
+
+def test_sonnet_5_5_n_herite_pas_de_sonnet_5():
+    """claude-sonnet-5 est un prefixe de claude-sonnet-5-5 : meme prix, mais
+    le modele doit etre reconnu sans diagnostic de prix absent."""
+    report = run([turn("claude-sonnet-5-5", "m1", 1000, 1000, 0, 1000000)])
+    assert report["Complete"] is True, report["Diagnostics"]
+    # 1000/1e6*2 + 1000/1e6*10 + 1e6/1e6*0.20
+    assert abs(bucket(report, "racine")["CostUsd"] - 0.212) < 1e-9
+
+
 if __name__ == "__main__":
     if sys.platform != "win32":
         print("Ce harness requiert Windows PowerShell 5.1.")

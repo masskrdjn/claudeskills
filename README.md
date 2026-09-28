@@ -28,12 +28,16 @@ useful independent analysis.
 | `scout` | `sonnet` | `medium` | 2 | 10 | Read-only codebase and log exploration |
 | `researcher` | `sonnet` | `medium` | 2 | 10 | Multi-source external research |
 | `runner` | `haiku` | *(unsupported)* | 1 | 5 | Long validations and large mechanical batches |
-| `builder` | `sonnet` | `xhigh` | 2 | 10 | Scoped implementation with targeted validation |
+| `builder` | `sonnet` | `high` | 2 | 10 | Scoped implementation with targeted validation |
 | `architect` | `opus`, or `fable` on confirmed access | `xhigh` | 4 → 10 | 20 → 50 | Rare, bounded architecture decisions only |
 
 `opus` means Opus 5.5 on the Anthropic API and subscriptions, which requires
 Claude Code 2.1.280 or newer; an older CLI or another provider serves a
-different model.
+different model. `sonnet` means Sonnet 5.5 on the Anthropic API from Claude
+Code 2.1.284; per the documentation it resolves to an older Sonnet on Bedrock,
+Vertex, Foundry and Claude Platform on AWS. Sonnet 5.5's effort levels are
+recalibrated relative to Sonnet 5, so the settings were re-chosen from the
+official guidance rather than carried over.
 
 Three choices deserve a justification:
 
@@ -48,9 +52,13 @@ Three choices deserve a justification:
   stays `medium`: their work is bounded by input and output rather than by
   reasoning, and lower effort consolidates tool calls — cheaper and faster at
   equal quality.
-- **`builder` raises effort rather than tier.** Effort is the first quality
-  lever within a model; `sonnet`/`xhigh` costs half as much as the tier above
-  for input and output, and the same for cache reads.
+- **`builder` raises effort rather than tier, but stops at `high`.** Effort is
+  the first quality lever within a model; `sonnet`/`high` costs half as much as
+  the tier above for input and output, and the same for cache reads. `xhigh` is
+  not the default: the documentation reserves it for long-horizon work with very
+  large token budgets and for cases where evals show a gain, and `builder`'s
+  bounded tasks (three attempts) are neither. Move it to `xhigh` only on
+  measurement, from complete runs.
 
 Two escalations exist, decided explicitly and passed at invocation without
 editing any role file: `builder` to `opus` for a hard task, and `architect` to

@@ -58,7 +58,7 @@ adapté.
 | `scout` | `sonnet` | `medium` |
 | `researcher` | `sonnet` | `medium` |
 | `runner` | `haiku` | *(non supporté par ce modèle)* |
-| `builder` | `sonnet` | `xhigh` |
+| `builder` | `sonnet` | `high` |
 | `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` |
 
 Les rôles nommés portent leurs modèles, leurs efforts et leurs outils. Leur

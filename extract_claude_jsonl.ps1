@@ -69,8 +69,10 @@ $ErrorActionPreference = 'Stop'
 $script:DefaultPrices = @{
     'claude-fable-5-1' = @{ Input = 10.0; Output = 50.0; CacheWrite5m = 12.50; CacheWrite1h = 20.0; CacheRead = 0.25 }
     'claude-fable-5'   = @{ Input = 10.0; Output = 50.0; CacheWrite5m = 12.50; CacheWrite1h = 20.0; CacheRead = 0.25 }
+    'claude-opus-5-5'  = @{ Input =  4.0; Output = 20.0; CacheWrite5m =  5.00; CacheWrite1h =  8.0; CacheRead = 0.20 }
     'claude-opus-5'    = @{ Input =  5.0; Output = 25.0; CacheWrite5m =  6.25; CacheWrite1h = 10.0; CacheRead = 0.50 }
     'claude-opus-4-8'  = @{ Input =  5.0; Output = 25.0; CacheWrite5m =  6.25; CacheWrite1h = 10.0; CacheRead = 0.50 }
+    'claude-sonnet-5-5' = @{ Input =  2.0; Output = 10.0; CacheWrite5m =  2.50; CacheWrite1h =  4.0; CacheRead = 0.20 }
     'claude-sonnet-5'  = @{ Input =  2.0; Output = 10.0; CacheWrite5m =  2.50; CacheWrite1h =  4.0; CacheRead = 0.20 }
     'claude-haiku-4-5' = @{ Input =  1.0; Output =  5.0; CacheWrite5m =  1.25; CacheWrite1h =  2.0; CacheRead = 0.10 }
 }
