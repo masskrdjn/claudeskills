@@ -12,7 +12,7 @@ import os
 import re
 import subprocess
 import sys
-import tempfile
+from test_support import workspace_directory
 
 ROOT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1
                        else os.path.dirname(os.path.abspath(__file__)))
@@ -312,17 +312,17 @@ def t_harness_interne():
 
 def t_dossier_vide_echoue_proprement():
     """Un dossier sans transcript ne doit pas produire un rapport vide et 'complet'."""
-    tmp = tempfile.mkdtemp(prefix="smoke_empty_")
-    proc = subprocess.run(
-        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-         os.path.join(ROOT, "extract_claude_jsonl.ps1"),
-         "-SessionsDir", tmp, "-Quiet"],
-        capture_output=True, text=True)
-    assert proc.returncode != 0, \
-        "le script a reussi sur un dossier vide, il aurait du echouer"
-    assert "Aucun transcript" in (proc.stdout + proc.stderr), \
-        "message d'erreur peu clair : %s" % (proc.stdout + proc.stderr)[-300:]
-    return "erreur explicite, pas de faux rapport"
+    with workspace_directory("_smoke_test_") as tmp:
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+             os.path.join(ROOT, "extract_claude_jsonl.ps1"),
+             "-SessionsDir", tmp, "-Quiet"],
+            capture_output=True, text=True)
+        assert proc.returncode != 0, \
+            "le script a reussi sur un dossier vide, il aurait du echouer"
+        assert "Aucun transcript" in (proc.stdout + proc.stderr), \
+            "message d'erreur peu clair : %s" % (proc.stdout + proc.stderr)[-300:]
+        return "erreur explicite, pas de faux rapport"
 
 
 def t_dossier_inexistant_echoue():
@@ -337,39 +337,39 @@ def t_dossier_inexistant_echoue():
 
 def t_arithmetique_du_cout():
     """Verification independante du calcul, sans reutiliser la formule du script."""
-    tmp = tempfile.mkdtemp(prefix="smoke_cost_")
-    rec = {"type": "assistant", "timestamp": "2026-09-12T08:00:00.000Z",
-           "effort": "medium",
-           "message": {"id": "m1", "model": "claude-sonnet-5", "role": "assistant",
-                       "usage": {"input_tokens": 1_000_000,
-                                 "output_tokens": 1_000_000,
-                                 "cache_creation_input_tokens": 2_000_000,
-                                 "cache_creation": {
-                                     "ephemeral_5m_input_tokens": 1_000_000,
-                                     "ephemeral_1h_input_tokens": 1_000_000},
-                                 "cache_read_input_tokens": 1_000_000}}}
-    with open(os.path.join(tmp, "s.jsonl"), "w", encoding="utf-8") as fh:
-        fh.write(json.dumps(rec) + "\n")
-    export = os.path.join(tmp, "r.json")
-    proc = subprocess.run(
-        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
-         os.path.join(ROOT, "extract_claude_jsonl.ps1"),
-         "-SessionsDir", tmp, "-ExportPath", export, "-Quiet"],
-        capture_output=True, text=True)
-    assert proc.returncode == 0, proc.stderr[-800:]
-    with open(export, encoding="utf-8-sig") as fh:
-        report = json.load(fh)
-    assert report["Complete"] is True, report["Diagnostics"]
-    # Un million de tokens de chaque sorte : le cout est la somme des tarifs.
-    # Les deux ecritures de cache se tarifent differemment selon leur TTL.
-    attendu = 2.0 + 10.0 + 2.50 + 4.00 + 0.20
-    b = report["Buckets"][0]
-    assert b["CacheWrite5mTokens"] == 1_000_000 and b["CacheWrite1hTokens"] == 1_000_000, \
-        "ventilation du cache perdue : %s" % b
-    got = b["CostUsd"]
-    assert abs(got - attendu) < 1e-9, \
-        "cout %.4f, attendu %.4f (2 + 10 + 2.50 + 4.00 + 0.20)" % (got, attendu)
-    return "1M de chaque sorte, deux TTL de cache = %.2f USD" % attendu
+    with workspace_directory("_smoke_test_") as tmp:
+        rec = {"type": "assistant", "timestamp": "2026-09-12T08:00:00.000Z",
+               "effort": "medium",
+               "message": {"id": "m1", "model": "claude-sonnet-5", "role": "assistant",
+                           "usage": {"input_tokens": 1_000_000,
+                                     "output_tokens": 1_000_000,
+                                     "cache_creation_input_tokens": 2_000_000,
+                                     "cache_creation": {
+                                         "ephemeral_5m_input_tokens": 1_000_000,
+                                         "ephemeral_1h_input_tokens": 1_000_000},
+                                     "cache_read_input_tokens": 1_000_000}}}
+        with open(os.path.join(tmp, "s.jsonl"), "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec) + "\n")
+        export = os.path.join(tmp, "r.json")
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+             os.path.join(ROOT, "extract_claude_jsonl.ps1"),
+             "-SessionsDir", tmp, "-ExportPath", export, "-Quiet"],
+            capture_output=True, text=True)
+        assert proc.returncode == 0, proc.stderr[-800:]
+        with open(export, encoding="utf-8-sig") as fh:
+            report = json.load(fh)
+        assert report["Complete"] is True, report["Diagnostics"]
+        # Un million de tokens de chaque sorte : le cout est la somme des tarifs.
+        # Les deux ecritures de cache se tarifent differemment selon leur TTL.
+        attendu = 2.0 + 10.0 + 2.50 + 4.00 + 0.20
+        b = report["Buckets"][0]
+        assert b["CacheWrite5mTokens"] == 1_000_000 and b["CacheWrite1hTokens"] == 1_000_000, \
+            "ventilation du cache perdue : %s" % b
+        got = b["CostUsd"]
+        assert abs(got - attendu) < 1e-9, \
+            "cout %.4f, attendu %.4f (2 + 10 + 2.50 + 4.00 + 0.20)" % (got, attendu)
+        return "1M de chaque sorte, deux TTL de cache = %.2f USD" % attendu
 
 
 # --- Niveau 2 bis : environnement ------------------------------------------

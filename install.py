@@ -68,6 +68,30 @@ def _merge_tree(source: dict, target: dict, path: Path, prefix: str = "") -> tup
             merged[key] = sub
             changed = changed or sub_changed
             warnings.extend(sub_warnings)
+        elif dotted == "hooks.PostToolUse" and isinstance(value, list) and isinstance(target[key], list):
+            # Hook arrays are additive. Keep user entries and avoid duplicates
+            # when the same managed hook is already in a matching entry.
+            entries = list(target[key])
+            for proposed in value:
+                if proposed in entries:
+                    continue
+                match = next((index for index, entry in enumerate(entries)
+                              if isinstance(entry, dict) and isinstance(proposed, dict)
+                              and {k: v for k, v in entry.items() if k != "hooks"}
+                              == {k: v for k, v in proposed.items() if k != "hooks"}
+                              and isinstance(entry.get("hooks"), list)
+                              and isinstance(proposed.get("hooks"), list)), None)
+                if match is None:
+                    entries.append(proposed)
+                    changed = True
+                else:
+                    hooks = list(entries[match]["hooks"])
+                    for hook in proposed["hooks"]:
+                        if hook not in hooks:
+                            hooks.append(hook)
+                            changed = True
+                    entries[match] = {**entries[match], "hooks": hooks}
+            merged[key] = entries
         elif target[key] != value:
             warnings.append(f"{path}: {dotted} conservé ({target[key]!r}, valeur proposée {value!r})")
     return merged, changed, warnings
@@ -105,6 +129,7 @@ def _managed_sources() -> list[Path]:
     return [
         *sorted((SOURCE / ".claude/agents").glob("*.md")),
         SOURCE / ".claude/skills/quota-orchestrator/SKILL.md",
+        SOURCE / ".claude/hooks/agent_identity.py",
     ]
 
 

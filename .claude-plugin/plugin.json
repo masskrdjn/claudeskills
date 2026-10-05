@@ -7,7 +7,7 @@
   },
   "homepage": "https://github.com/masskrdjn/claudeskills",
   "repository": "https://github.com/masskrdjn/claudeskills",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "keywords": [
     "claude-code",
     "routing",
@@ -23,6 +23,17 @@
   ],
   "skills": "./.claude/skills/",
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Agent|Task|TaskOutput",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"${CLAUDE_PLUGIN_ROOT}/.claude/hooks/agent_identity.py\""
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "startup|resume|clear|compact",

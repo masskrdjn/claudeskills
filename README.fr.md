@@ -98,8 +98,35 @@ constaté et le surcoût, et consigne la réponse dans
 
 Sans accès ou sur refus, `architect` répond en Opus 5.5 `xhigh` et **annonce
 explicitement qu'il ne s'agit pas d'un avis Fable**. Après coup, le modèle
-effectif est vérifié dans le résultat d'appel (`resolvedModel`) : sans
-correspondance, le résultat est écarté comme non conforme.
+effectif est vérifié dans les métadonnées runtime lorsqu'elles sont disponibles
+(par exemple `resolvedModel`). Leur absence ne fait pas rejeter le travail ni
+répéter ses validations ; elle interdit seulement de présenter Fable comme attesté.
+
+Chaque rôle renvoie un en-tête `name`, `model_requested`, `effort_requested`.
+La racine transmet ces valeurs dans le prompt, overrides compris. Le rôle est
+sélectionné via `subagent_type` ; son `name` de frontmatter reste stable.
+L'en-tête est déclaratif, sans attester le modèle effectif. Voir la
+[documentation Anthropic des sous-agents](https://code.claude.com/docs/en/sub-agents).
+
+## Identité réellement observée
+
+Le hook `.claude/hooks/agent_identity.py` ajoute au contexte du parent un rapport
+avec `resolvedModel`, sa provenance et l'effort observé lorsqu'il est disponible.
+Il lit les métadonnées natives et le transcript du seul agent concerné. Il ne
+remplit jamais un modèle effectif à partir de l'alias demandé ou du profil, et
+ne modifie pas la réponse native de Claude Code. Un champ inconnu reste `null`.
+Le modèle résolu au lancement et celui observé après exécution restent distincts ;
+les divergences, changements de modèle et preuves incomplètes sont signalés.
+
+Le hook est livré dans le plugin et dans l'installation classique. Python 3 doit
+être accessible via `python` au processus Claude Code. Redémarrez la session
+après mise à jour et vérifiez que le hook est activé : sans son rapport, l'identité
+n'est pas attestée. Les erreurs de métadonnées demandent un contrôle ciblé,
+jamais une reprise intégrale du travail. Le format interne des transcripts peut
+évoluer ; les tests couvrent le format observé, pas une garantie future du CLI.
+Transport : [hooks Anthropic](https://code.claude.com/docs/en/hooks).
+
+Validation sans appel de modèle : `python test_agent_identity.py`.
 
 ## Structure du projet
 
@@ -113,6 +140,7 @@ correspondance, le résultat est écarté comme non conforme.
 │   ├── marketplace.json
 │   └── plugin.json
 └── .claude/
+    ├── hooks/agent_identity.py
     ├── settings.json
     ├── skills/quota-orchestrator/SKILL.md
     └── agents/
@@ -185,15 +213,51 @@ de l'application. Ouvrez ensuite une nouvelle session, ou lancez
   `claudeskills:quota-orchestrator`. Un agent projet ou utilisateur de même nom
   court prime sur celui du plugin.
 - Le hook exécute `cat` et demande donc un shell POSIX : Git Bash sous Windows.
-- Un plugin ne peut pas fournir de réglages. Choisissez `opus` et `xhigh` avec
+- Le plugin ne charge pas les réglages de `.claude/settings.json`. Choisissez `opus` et `xhigh` avec
   `/model` et `/effort`, ou copiez `effortLevel`, `modelSettings` et
   `permissions.deny` depuis le `.claude/settings.json` de ce dépôt vers
   `~/.claude/settings.json`.
 - Ne cumulez pas le plugin et `install.py` sur un même projet : les règles
   seraient chargées deux fois et les rôles du projet masqueraient ceux du plugin.
-- Le manifeste ne fixe volontairement aucune `version`, qui figerait le plugin
-  sur cette valeur ; `claude plugin validate .` le signale comme unique
-  avertissement.
+- La version publiée est définie uniquement dans `.claude-plugin/plugin.json`
+  (`0.1.2` pour cette livraison). Le catalogue ne la duplique pas. Incrémentez-la
+  à chaque livraison afin que la mise à jour distingue les versions.
+- `.claude/settings.json` est une configuration partagée, volontairement suivie
+  par Git. Gardez vos réglages personnels et secrets dans
+  `.claude/settings.local.json`, qui est ignoré.
+
+### Mettre à jour et valider une livraison
+
+Après publication du commit :
+
+```bash
+claude plugin marketplace update claudeskills
+claude plugin update claudeskills@claudeskills
+```
+
+Démarrez une nouvelle session ou utilisez `/reload-plugins`. Python 3.11+ doit
+être accessible via `python`, y compris depuis Claude Code, pour le hook d’identité.
+
+Avant commit, validez séparément les deux manifestes (la racine est reconnue
+comme marketplace par le CLI) et les tests sans consommation de modèle :
+
+```bash
+claude plugin validate .claude-plugin/plugin.json
+claude plugin validate .claude-plugin/marketplace.json --strict
+python test_plugin.py
+python test_agent_identity.py
+python test_install.py
+python smoketest.py
+```
+
+Le validateur peut avertir que le `CLAUDE.md` racine n’est pas chargé
+comme contexte de plugin. C’est attendu : notre hook `SessionStart` le charge
+explicitement, et `test_plugin.py` vérifie ce raccordement. `--strict` ferait
+échouer cette validation sur cet avertissement ; le catalogue, lui, est validé
+avec `--strict`.
+
+`smoketest.py` nécessite Windows PowerShell 5.1. Les tests avec appel de modèle
+restent séparés dans `smoketest_live.py` et consomment du budget.
 
 ### Installer dans un projet
 
@@ -206,9 +270,10 @@ de l'application. Ouvrez ensuite une nouvelle session, ou lancez
    `--dry-run` affiche le plan sans rien écrire. L'installateur ajoute les
    règles de routage à un `CLAUDE.md` existant entre des marqueurs
    `claudeskills:routing`, n'ajoute que les clés manquantes de
-   `.claude/settings.json`, sauvegarde les fichiers modifiés sous
+   `.claude/settings.json`, ajoute le hook d’identité sans retirer les hooks
+   existants, sauvegarde les fichiers modifiés sous
    `.claudeskills-backup/`, et avertit au lieu d'écraser un fichier de rôle ou
-   de skill divergent.
+   de skill ou de hook divergent.
 2. Relisez les avertissements, puis les modèles, les efforts et les règles de
    permission pour votre environnement, puis `/agents` pour confirmer que les
    cinq rôles sont vus avec le bon modèle et le bon effort.

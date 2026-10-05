@@ -91,8 +91,38 @@ le consulter dans cette session ; isoler la décision dans une session aux
 permissions adaptées. `architect` ne fait ni exploration, ni commandes, ni
 écriture, ni délégation.
 
-Après la réponse d'un sous-agent, vérifier dans le résultat d'appel le rôle
-(`agentType`), le modèle effectif (`resolvedModel`) et le statut. Sans
-correspondance entre le modèle annoncé et `resolvedModel`, écarter le résultat
-comme non conforme, et ne jamais annoncer une consultation ou une consommation
-Fable.
+## Identité et acceptation d'une délégation
+
+Sélectionner le rôle par le champ `subagent_type` de l'outil Agent, avec le nom
+exact exposé par le runtime (qualifié pour un plugin). Le champ `name` du
+frontmatter définit l'identifiant du rôle : ne pas le renommer pour y encoder
+un modèle. Transmettre dans le prompt une enveloppe d'identité compacte :
+`name: <rôle sélectionné> | model_requested: <modèle demandé> | effort_requested: <effort configuré ou hérité>`.
+Y reporter l'override de modèle passé à l'appel s'il existe ; pour Haiku,
+indiquer l'effort comme non supporté. Ne pas inventer un paramètre d'appel
+`effort` quand le schéma de l'outil ne l'expose pas.
+
+L'enfant renvoie cette identité en tête de son rapport. Elle est déclarative.
+Le hook `PostToolUse` du projet remonte séparément un rapport d'identité à
+partir de la réponse native et du transcript lié à cet agent et cette session.
+Utiliser son `resolvedModel` et sa provenance, pas une auto-déclaration de
+l'enfant ni une résolution supposée d'alias. Le hook complète le contexte du
+parent ; il ne modifie pas les champs natifs de l'outil Agent.
+
+Conserver trois distinctions : modèle demandé, modèle résolu au lancement,
+modèle observé dans les tours effectivement exécutés. Un lancement de fond
+n'atteste ni la fin du travail ni l'absence de substitution ultérieure. À la
+récupération du résultat, exploiter les nouvelles preuves liées au même agent.
+L'effort observé est distinct de l'effort configuré : une valeur manquante reste
+`null`, sans la remplacer par le profil. Plusieurs modèles observés ou une
+divergence sont signalés, jamais réduits arbitrairement au dernier modèle.
+
+Si le hook est absent, échoue ou signale des métadonnées incomplètes, ne jamais
+présumer que l'identité est vérifiée. Une valeur absente signifie « non attesté »,
+pas « non conforme ». Ne pas refaire l'exploration ou les tests pour cette
+seule raison : vérifier uniquement les métadonnées de l'agent concerné, puis
+accepter le fond sur ses preuves et sa couverture. Une divergence explicite
+appelle un contrôle ciblé de l'identité et de son impact avant de conclure.
+Ne jamais annoncer une consultation ou une consommation Fable attestée sans
+preuve du modèle effectif ; si cette identité est un critère d'acceptation,
+la laisser non vérifiée jusqu'à une preuve ciblée, sans refaire le fond.

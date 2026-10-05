@@ -178,16 +178,59 @@ qu'il est défini, en Opus `xhigh`, et **annoncer explicitement qu'il s'agit d'u
 avis Opus 5.5, pas Fable**. Ne jamais présenter un repli comme une consultation
 Fable.
 
-**Preuve après coup.** Le résultat d'un appel de sous-agent porte `agentType`,
-`resolvedModel` et `status`. Vérifier que `resolvedModel` correspond au modèle
-annoncé. Sans cette correspondance, écarter le résultat comme non conforme et
-ne jamais annoncer une consultation ou une consommation Fable.
+**Preuve après coup.** Le hook `PostToolUse` du projet remonte au parent un
+rapport d'identité séparé du livrable de l'enfant : `resolvedModel` provient
+d'une métadonnée native ou du transcript associé à l'identifiant de l'agent et
+à la session. Il ne modifie pas la réponse native de l'outil. Distinguer modèle
+demandé, modèle résolu au lancement et modèle observé pendant l'exécution.
+Un lancement asynchrone ne prouve pas la fin du travail : exploiter les preuves
+au retour du résultat, pour ce même agent. Une diversité de modèles ou une
+divergence ne se masque pas en gardant seulement le dernier modèle.
+L'effort effectif manquant reste `null`, même si le profil configure un effort.
+
+Une métadonnée absente ou un hook non exécuté signifie « non attesté », sans
+invalider le livrable. Ne pas refaire le travail de l'enfant pour cette seule
+raison. Une divergence explicite appelle une vérification ciblée de l'identité
+et une évaluation de son impact. Ne pas annoncer une consultation ou une
+consommation Fable attestée sans preuve du modèle effectif ; si cette preuve
+est exigée, laisser ce seul critère non vérifié, sans relancer l'analyse métier.
 
 ## Transmettre sans perdre les conditions
 
 Utiliser les rôles nommés. Un enfant part d'un contexte propre : le message doit
 être autonome. Ne pas transmettre l'historique complet par commodité pour une
 tâche mécanique.
+
+Sélectionner le rôle dans le champ `subagent_type` prévu par l'outil Agent,
+avec son nom exact exposé par le runtime, qualifié pour un plugin. Le champ
+`name` du frontmatter reste l'identifiant stable du rôle, pas un nom de modèle.
+Transmettre l'enveloppe suivante dans le prompt et la récupérer en première
+ligne du rapport :
+`name: <rôle sélectionné> | model_requested: <modèle demandé> | effort_requested: <effort configuré ou hérité>`.
+Exemple sans override : `name: scout | model_requested: sonnet | effort_requested: medium`.
+Reporter tout override de modèle réellement passé à l'appel ; l'effort vient
+du profil ou de l'héritage, sans inventer un argument d'appel non supporté.
+Pour Haiku, indiquer `effort_requested: non supporté`.
+Ces champs du rapport sont déclaratifs et propres au projet, pas des champs
+natifs ajoutés au résultat de l'outil. L'enfant ne s'auto-atteste pas : il ne
+fournit un modèle/effort effectif qu'avec une métadonnée runtime et sa provenance.
+La racine réutilise les preuves du rapport et effectue l'acceptation ciblée ;
+l'absence d'attestation ne déclenche pas une nouvelle exploration ou validation.
+
+Source : [documentation Anthropic des sous-agents](https://code.claude.com/docs/en/sub-agents),
+consultée le 5 octobre 2026 : `name`, `model` et `effort` dans le frontmatter,
+`subagent_type` pour sélectionner un rôle. La page décrit aussi l'affichage du
+modèle et de l'effort dans l'interface et `/tasks` ; elle n'établit pas le schéma
+de retour universel supposé auparavant. Ne pas confondre visibilité UI et
+métadonnées accessibles à l'agent principal.
+
+Le champ natif `resolvedModel` a été observé localement le 5 octobre 2026 dans
+un résultat `async_launched`, concordant avec `message.model` et `effort` dans
+le transcript enfant. C'est une observation du format local, pas une garantie
+universelle d'Anthropic. Le lecteur vérifie le format et signale les inconnues.
+Le transport du rapport utilise le mécanisme `PostToolUse` / `additionalContext`
+de la [référence officielle des hooks](https://code.claude.com/docs/en/hooks).
+`SubagentStop` ne sert pas à prétendre injecter cette preuve dans le parent.
 
 Le message autonome contient les seuls éléments utiles :
 

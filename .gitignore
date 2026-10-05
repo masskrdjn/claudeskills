@@ -8,3 +8,13 @@ __pycache__/
 
 # Reponses locales au questionnaire d'acces modele, propres a chaque poste.
 .claude/settings.local.json
+
+# Caches et répertoires temporaires des validations locales.
+.pytest_cache/
+/.validation-tmp/
+/_identity_test_*/
+/_install_test_*/
+/_smoke_test_*/
+/_extract_test_*/
+/_release_test_*/
+.claudeskills-backup/

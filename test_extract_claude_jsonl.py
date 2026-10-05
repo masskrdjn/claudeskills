@@ -12,10 +12,9 @@ dans le test concerne. Ce sont les seules valeurs qui font autorite ici.
 
 import json
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
+from test_support import workspace_directory
 
 SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                       "extract_claude_jsonl.ps1")
@@ -78,38 +77,37 @@ def run(root_records, subagents=(), raw_lines=(), session_id=SESSION):
 
     `subagents` : sequence de (agent_id, meta_or_None, [enregistrements]).
     """
-    tmp = tempfile.mkdtemp(prefix="claudejsonl_")
-    with open(os.path.join(tmp, session_id + ".jsonl"), "w",
-              encoding="utf-8") as fh:
-        for rec in root_records:
-            fh.write(json.dumps(rec) + "\n")
-        for line in raw_lines:
-            fh.write(line + "\n")
+    with workspace_directory("_extract_test_") as tmp:
+        with open(os.path.join(tmp, session_id + ".jsonl"), "w",
+                  encoding="utf-8") as fh:
+            for rec in root_records:
+                fh.write(json.dumps(rec) + "\n")
+            for line in raw_lines:
+                fh.write(line + "\n")
 
-    if subagents:
-        subdir = os.path.join(tmp, session_id, "subagents")
-        os.makedirs(subdir)
-        for agent_id, meta, records in subagents:
-            base = os.path.join(subdir, "agent-%s" % agent_id)
-            with open(base + ".jsonl", "w", encoding="utf-8") as fh:
-                for rec in records:
-                    fh.write(json.dumps(rec) + "\n")
-            if meta is not None:
-                with open(base + ".meta.json", "w", encoding="utf-8") as fh:
-                    json.dump(meta, fh)
+        if subagents:
+            subdir = os.path.join(tmp, session_id, "subagents")
+            os.makedirs(subdir)
+            for agent_id, meta, records in subagents:
+                base = os.path.join(subdir, "agent-%s" % agent_id)
+                with open(base + ".jsonl", "w", encoding="utf-8") as fh:
+                    for rec in records:
+                        fh.write(json.dumps(rec) + "\n")
+                if meta is not None:
+                    with open(base + ".meta.json", "w", encoding="utf-8") as fh:
+                        json.dump(meta, fh)
 
-    export = os.path.join(tmp, "report.json")
-    proc = subprocess.run(
-        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
-         "-File", SCRIPT, "-SessionsDir", tmp, "-ExportPath", export, "-Quiet"],
-        capture_output=True, text=True)
-    assert proc.returncode == 0, (
-        "script en echec (code %s)\nSTDOUT:\n%s\nSTDERR:\n%s"
-        % (proc.returncode, proc.stdout, proc.stderr))
-    with open(export, encoding="utf-8-sig") as fh:  # PowerShell 5.1 ecrit un BOM
-        report = json.load(fh)
-    shutil.rmtree(tmp, ignore_errors=True)
-    return report
+        export = os.path.join(tmp, "report.json")
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+             "-File", SCRIPT, "-SessionsDir", tmp, "-ExportPath", export, "-Quiet"],
+            capture_output=True, text=True)
+        assert proc.returncode == 0, (
+            "script en echec (code %s)\nSTDOUT:\n%s\nSTDERR:\n%s"
+            % (proc.returncode, proc.stdout, proc.stderr))
+        with open(export, encoding="utf-8-sig") as fh:  # PowerShell 5.1 ecrit un BOM
+            report = json.load(fh)
+        return report
 
 
 def meta(agent_type, shape="foreground"):

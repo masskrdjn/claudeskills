@@ -4,7 +4,10 @@ import importlib.util
 import json
 import subprocess
 import sys
-import tempfile
+import os
+import shutil
+import uuid
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,7 +19,20 @@ EXPECTED = [
     Path(".claude/settings.json"),
     *(Path(".claude/agents") / name for name in ("architect.md", "builder.md", "researcher.md", "runner.md", "scout.md")),
     Path(".claude/skills/quota-orchestrator/SKILL.md"),
+    Path(".claude/hooks/agent_identity.py"),
 ]
+
+
+@contextmanager
+def workspace_directory():
+    # Ordinary mkdir avoids Windows fixture ACLs inherited from mkdtemp's 0700.
+    path = ROOT / ("_install_test_" + uuid.uuid4().hex)
+    os.mkdir(path)
+    try:
+        yield path
+    finally:
+        assert path.parent.resolve() == ROOT
+        shutil.rmtree(path)
 
 
 def run(target, *args, success=True):
@@ -30,7 +46,7 @@ def snapshot(root):
 
 
 if __name__ == "__main__":
-    with tempfile.TemporaryDirectory(prefix="claudeskills-install-") as temporary:
+    with workspace_directory() as temporary:
         base = Path(temporary)
 
         empty = base / "empty"
@@ -46,7 +62,12 @@ if __name__ == "__main__":
         existing = base / "existing"
         (existing / ".claude/agents").mkdir(parents=True)
         original_instructions = "# user rules\n"
-        original_settings = {"effortLevel": "low", "custom": 7, "permissions": {"allow": ["Bash(ls:*)"]}}
+        custom_hook = {"type": "command", "command": "echo custom"}
+        custom_entry = {"matcher": "Agent|Task|TaskOutput", "hooks": [custom_hook]}
+        other_entry = {"matcher": "Read", "hooks": [{"type": "command", "command": "echo read"}]}
+        original_settings = {"effortLevel": "low", "custom": 7, "permissions": {"allow": ["Bash(ls:*)"]},
+                             "hooks": {"PostToolUse": [custom_entry, other_entry],
+                                       "SessionStart": [{"hooks": [{"type": "command", "command": "echo start"}]}]}}
         (existing / "CLAUDE.md").write_text(original_instructions, encoding="utf-8")
         (existing / ".claude/settings.json").write_text(json.dumps(original_settings, indent=2), encoding="utf-8")
         custom_agent = existing / ".claude/agents/scout.md"
@@ -59,6 +80,10 @@ if __name__ == "__main__":
         assert merged_settings["effortLevel"] == "low" and merged_settings["custom"] == 7
         assert merged_settings["permissions"]["allow"] == ["Bash(ls:*)"]
         assert merged_settings["permissions"]["deny"] and merged_settings["modelSettings"]
+        hooks = merged_settings["hooks"]["PostToolUse"]
+        assert len(hooks) == 2 and hooks[0]["hooks"][0] == custom_hook and hooks[1] == other_entry
+        assert len(hooks[0]["hooks"]) == 2 and "agent_identity.py" in hooks[0]["hooks"][1]["command"]
+        assert merged_settings["hooks"]["SessionStart"] == original_settings["hooks"]["SessionStart"]
         assert "effortLevel conservé" in result.stderr
         assert custom_agent.read_text(encoding="utf-8") == "local scout\n"
         assert "préservé avec avertissement" in result.stdout
@@ -121,4 +146,4 @@ if __name__ == "__main__":
         assert not any((rollback / path).exists() for path in EXPECTED)
         assert list(rollback.iterdir()) == []
 
-    print("PASS: empty install, merge, conflicts, idempotence, dry-run, invalid JSON, symlink refusal, rollback.")
+    print("PASS: empty install incl. identity hook, preserving hook merge, conflicts, idempotence, dry-run, invalid JSON, symlink refusal (when supported), rollback.")
