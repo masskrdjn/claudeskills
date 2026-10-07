@@ -57,13 +57,17 @@ adapté.
 | Racine | `opus` | `xhigh` |
 | `scout` | `sonnet` | `medium` |
 | `researcher` | `sonnet` | `medium` |
-| `runner` | `haiku` | *(non supporté par ce modèle)* |
+| `runner` | `claude-haiku-5-5` | `medium` |
 | `builder` | `sonnet` | `high` |
 | `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` |
 
 Les rôles nommés portent leurs modèles, leurs efforts et leurs outils. Leur
 liste d'outils est réellement appliquée : c'est elle, et non une consigne de
 prose, qui empêche un rôle en lecture seule d'écrire ou de déléguer.
+
+`runner` utilise l'identifiant fixe de Haiku 5.5. Ce modèle prend en charge
+`effort` : `medium` est le point de départ recommandé pour le travail agentique,
+et réduit les arrêts prématurés et vérifications omises par rapport à `low`.
 
 Deux escalades seulement, décidées explicitement par la racine et passées à
 l'invocation, sans modifier aucun fichier de rôle : `builder` vers `opus` pour
@@ -98,8 +102,8 @@ exact exposé par le runtime (qualifié pour un plugin). Le champ `name` du
 frontmatter définit l'identifiant du rôle : ne pas le renommer pour y encoder
 un modèle. Transmettre dans le prompt une enveloppe d'identité compacte :
 `name: <rôle sélectionné> | model_requested: <modèle demandé> | effort_requested: <effort configuré ou hérité>`.
-Y reporter l'override de modèle passé à l'appel s'il existe ; pour Haiku,
-indiquer l'effort comme non supporté. Ne pas inventer un paramètre d'appel
+Y reporter l'override de modèle passé à l'appel s'il existe, et l'effort
+configuré ou hérité ; Haiku 5.5 prend en charge `effort`. Ne pas inventer un paramètre d'appel
 `effort` quand le schéma de l'outil ne l'expose pas.
 
 L'enfant renvoie cette identité en tête de son rapport. Elle est déclarative.

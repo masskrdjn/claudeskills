@@ -72,8 +72,13 @@ $script:DefaultPrices = @{
     'claude-opus-5-5'  = @{ Input =  4.0; Output = 20.0; CacheWrite5m =  5.00; CacheWrite1h =  8.0; CacheRead = 0.20 }
     'claude-opus-5'    = @{ Input =  5.0; Output = 25.0; CacheWrite5m =  6.25; CacheWrite1h = 10.0; CacheRead = 0.50 }
     'claude-opus-4-8'  = @{ Input =  5.0; Output = 25.0; CacheWrite5m =  6.25; CacheWrite1h = 10.0; CacheRead = 0.50 }
-    'claude-sonnet-5-5' = @{ Input =  2.0; Output = 10.0; CacheWrite5m =  2.50; CacheWrite1h =  4.0; CacheRead = 0.20 }
+    'claude-sonnet-5-5' = @{ Input =  2.0; Output = 10.0; CacheWrite5m =  2.50; CacheWrite1h =  4.0; CacheRead = 0.10 }
     'claude-sonnet-5'  = @{ Input =  2.0; Output = 10.0; CacheWrite5m =  2.50; CacheWrite1h =  4.0; CacheRead = 0.20 }
+    'claude-haiku-5-5' = @{
+        Input = 0.10; Output = 0.50; CacheWrite5m = 0.125; CacheWrite1h = 0.20; CacheRead = 0.01
+        PromptTokenThreshold = 100000
+        AboveThreshold = @{ Input = 0.50; Output = 2.50; CacheWrite5m = 0.625; CacheWrite1h = 1.0; CacheRead = 0.05 }
+    }
     'claude-haiku-4-5' = @{ Input =  1.0; Output =  5.0; CacheWrite5m =  1.25; CacheWrite1h =  2.0; CacheRead = 0.10 }
 }
 
@@ -113,12 +118,19 @@ function Get-CostUsd {
     param([hashtable]$Price, [int64]$In, [int64]$Out,
           [int64]$CacheWrite5m, [int64]$CacheWrite1h, [int64]$CacheRead)
     if ($null -eq $Price) { return $null }
+    # Le seuil porte sur le prompt du tour deduplique, cache compris, hors
+    # sortie. Une table personnalisee simple garde ses tarifs sans seuil.
+    $threshold = Get-Prop $Price 'PromptTokenThreshold'
+    if ($null -ne $threshold -and ($In + $CacheWrite5m + $CacheWrite1h + $CacheRead) -gt $threshold) {
+        $Price = $Price.AboveThreshold
+    }
     $cost = ($In           / 1e6) * $Price.Input +
             ($Out          / 1e6) * $Price.Output +
             ($CacheWrite5m / 1e6) * $Price.CacheWrite5m +
             ($CacheWrite1h / 1e6) * $Price.CacheWrite1h +
             ($CacheRead    / 1e6) * $Price.CacheRead
-    return [math]::Round($cost, 6)
+    # Arrondir seulement apres la somme des tours du bucket.
+    return $cost
 }
 
 function New-Bucket {
@@ -206,7 +218,7 @@ function Read-Turns {
 }
 
 function Add-Turns {
-    param($Buckets, [array]$Turns, [string]$Key, [string]$Kind)
+    param($Buckets, [array]$Turns, [string]$Key, [string]$Kind, [hashtable]$Prices)
     foreach ($t in $Turns) {
         $bk = "$Key|$($t.Model)|$($t.Effort)"
         if (-not $Buckets.ContainsKey($bk)) {
@@ -220,6 +232,12 @@ function Add-Turns {
         $b.CacheWrite1hTokens += $t.C1h
         $b.CacheWriteTokens   += ($t.C5 + $t.C1h)
         $b.CacheReadTokens    += $t.CR
+        $price = Resolve-Price -Model $t.Model -Prices $Prices
+        if ($null -ne $price) {
+            if ($null -eq $b.CostUsd) { $b.CostUsd = 0.0 }
+            $b.CostUsd += Get-CostUsd -Price $price -In $t.In -Out $t.Out `
+                                    -CacheWrite5m $t.C5 -CacheWrite1h $t.C1h -CacheRead $t.CR
+        }
     }
 }
 
@@ -249,7 +267,7 @@ $sessions    = New-Object System.Collections.ArrayList
 foreach ($file in $files) {
     # Tours de l'agent racine.
     $rootTurns = @(Read-Turns -Path $file.FullName -Diagnostics $diagnostics)
-    Add-Turns -Buckets $buckets -Turns $rootTurns -Key 'racine' -Kind 'racine'
+    Add-Turns -Buckets $buckets -Turns $rootTurns -Key 'racine' -Kind 'racine' -Prices $prices
 
     # Metriques d'appel (duree, outils, statut) depuis le transcript racine.
     $calls = @{}
@@ -314,7 +332,7 @@ foreach ($file in $files) {
                 [void]$diagnostics.Add("sous-agent '$role' ($($sub.BaseName)) : transcript sans tour exploitable")
                 continue
             }
-            Add-Turns -Buckets $buckets -Turns $turns -Key $role -Kind "sous-agent ($shape)"
+            Add-Turns -Buckets $buckets -Turns $turns -Key $role -Kind "sous-agent ($shape)" -Prices $prices
 
             if ($calls.ContainsKey($agentId)) {
                 $bk = "$role|$($turns[0].Model)|$($turns[0].Effort)"
@@ -348,10 +366,7 @@ foreach ($b in $buckets.Values) {
     if ($null -eq $price) {
         [void]$diagnostics.Add("modele '$($b.Model)' absent de la table de prix ; cout non calculable")
     } else {
-        $b.CostUsd = Get-CostUsd -Price $price -In $b.InputTokens -Out $b.OutputTokens `
-                                 -CacheWrite5m $b.CacheWrite5mTokens `
-                                 -CacheWrite1h $b.CacheWrite1hTokens `
-                                 -CacheRead $b.CacheReadTokens
+        $b.CostUsd = [math]::Round($b.CostUsd, 6)
     }
     $rows += $b
 }

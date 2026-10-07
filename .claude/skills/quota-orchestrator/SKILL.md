@@ -80,9 +80,19 @@ dépendant ; ne pas inventer du travail parallèle ni dupliquer celui de l'enfan
 | Racine | `opus` — `claude-opus-5-5` | `xhigh` | 4 | 20 |
 | `scout` | `sonnet` — `claude-sonnet-5-5` | `medium` | 2 | 10 |
 | `researcher` | `sonnet` — `claude-sonnet-5-5` | `medium` | 2 | 10 |
-| `runner` | `haiku` — `claude-haiku-4-5` | *(non supporté)* | 1 | 5 |
+| `runner` | `claude-haiku-5-5` | `medium` | 0.10 / 0.50 | 0.50 / 2.50 |
 | `builder` | `sonnet` — `claude-sonnet-5-5` | `high` | 2 | 10 |
 | `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` | 4 → 10 | 20 → 50 |
+
+`runner` utilise l'identifiant fixe de Haiku 5.5. Ses deux tarifs concernent
+respectivement les prompts jusqu'à / au-delà de 100 000 tokens : entrée non
+mise en cache, écritures et lectures de cache de chaque requête, hors sortie.
+Le tarif choisi s'applique à toute la requête, avant agrégation des coûts.
+Les tarifs Haiku 4.5 restent dans le script pour les anciens transcripts.
+La lecture de cache de Sonnet 5.5 coûte désormais 0,10 $/MTok, contre 0,20 pour
+Opus 5.5. Sources du 7 octobre 2026 : [annonce Haiku 5.5](https://www.anthropic.com/claude-haiku-5-5),
+[tarifs](https://platform.claude.com/docs/en/about-claude/pricing) et
+[guide de prompting](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-haiku-5-5#use-effort-to-control-thinking).
 
 `opus` désigne Opus 5.5 sur l'API Anthropic et les abonnements à partir de
 Claude Code 2.1.280 ; un CLI plus ancien ou un autre fournisseur sert un autre
@@ -102,7 +112,9 @@ seulement là où des évals montrent un gain. Le défaut est `high` sur l'API e
 `runner` tourne sur le palier le moins cher parce qu'il exécute et rapporte sans
 concevoir, et parce que ses bornes — trois cycles, règle du signal nouveau, deux
 tentatives sur problème d'environnement — sont précisément ce qui rend ce palier
-sûr ici. Haiku ne supporte pas `effort` : ne pas écrire ce champ dans son rôle.
+sûr ici. Haiku 5.5 prend en charge `effort` : `medium` est le point de départ
+recommandé pour le travail agentique. `low` peut omettre des vérifications ou
+arrêter trop tôt sur de longs prompts ; le rôle exige des contrôles exécutés.
 
 `scout` et `researcher` ne descendent pas à ce palier : ils produisent des faits
 que la racine va croire sans les revérifier. Un palier trop bas y produit des
@@ -113,8 +125,8 @@ d'outils — moins cher et plus rapide à qualité tenue.
 
 `builder` reste sur le palier intermédiaire en `high` plutôt que de monter d'un
 palier : l'effort est le premier levier de qualité à l'intérieur d'un modèle,
-avant le changement de palier, et Sonnet 5.5 coûte deux fois moins en entrée et
-en sortie (même prix en lecture de cache). `xhigh` n'est pas le défaut : la
+avant le changement de palier, et Sonnet 5.5 coûte deux fois moins en entrée,
+en sortie et en lecture de cache. `xhigh` n'est pas le défaut : la
 documentation le réserve aux tâches longues à budget de tokens très large et
 aux cas où des évals montrent un gain, ce que les tâches bornées de `builder`
 (trois tentatives) ne sont pas. Passer `builder` en `xhigh` seulement sur
@@ -125,7 +137,7 @@ sur le rôle. Aucune ne demande de modifier un fichier :
 
 - `builder` → `opus`, pour une tâche difficile : invariants subtils, couplage
   entre plusieurs modules, ou premier échec porteur d'un signal conceptuel.
-  Opus 5.5 ne coûte que deux fois Sonnet 5.5, et autant en lecture de cache ;
+  Opus 5.5 coûte deux fois Sonnet 5.5 en entrée, sortie et lecture de cache ;
 - `architect` → `fable`, sur accès confirmé seulement, en second appel : quand
   l'avis Opus 5.5 laisse une contradiction technique décisive. Directement
   seulement si une erreur de décision coûterait exceptionnellement cher.
@@ -210,7 +222,7 @@ ligne du rapport :
 Exemple sans override : `name: scout | model_requested: sonnet | effort_requested: medium`.
 Reporter tout override de modèle réellement passé à l'appel ; l'effort vient
 du profil ou de l'héritage, sans inventer un argument d'appel non supporté.
-Pour Haiku, indiquer `effort_requested: non supporté`.
+Pour Haiku 5.5, reporter l'effort configuré ou hérité (`medium` pour `runner`).
 Ces champs du rapport sont déclaratifs et propres au projet, pas des champs
 natifs ajoutés au résultat de l'outil. L'enfant ne s'auto-atteste pas : il ne
 fournit un modèle/effort effectif qu'avec une métadonnée runtime et sa provenance.

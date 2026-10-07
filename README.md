@@ -27,7 +27,7 @@ useful independent analysis.
 | Primary | `opus` | `xhigh` | 4 | 20 | Triage, decisions, integration, small local tasks |
 | `scout` | `sonnet` | `medium` | 2 | 10 | Read-only codebase and log exploration |
 | `researcher` | `sonnet` | `medium` | 2 | 10 | Multi-source external research |
-| `runner` | `haiku` | *(unsupported)* | 1 | 5 | Long validations and large mechanical batches |
+| `runner` | `claude-haiku-5-5` | `medium` | 0.10 / 0.50 | 0.50 / 2.50 | Long validations and large mechanical batches |
 | `builder` | `sonnet` | `high` | 2 | 10 | Scoped implementation with targeted validation |
 | `architect` | `opus`, or `fable` on confirmed access | `xhigh` | 4 → 10 | 20 → 50 | Rare, bounded architecture decisions only |
 
@@ -39,13 +39,22 @@ Vertex, Foundry and Claude Platform on AWS. Sonnet 5.5's effort levels are
 recalibrated relative to Sonnet 5, so the settings were re-chosen from the
 official guidance rather than carried over.
 
+`runner` uses the fixed Haiku 5.5 model ID. Its prices above apply to prompts
+up to / over 100,000 tokens, respectively. The threshold includes uncached
+input, cache writes, and cache reads for each request; output tokens do not
+count toward it. Both input and output use the selected rate for that request.
+See the [Haiku 5.5 announcement](https://www.anthropic.com/claude-haiku-5-5)
+and [pricing](https://platform.claude.com/docs/en/about-claude/pricing).
+
 Three choices deserve a justification:
 
 - **`runner` on the cheapest tier.** The role executes and reports; it does not
   design. Its bounds — three fix/test cycles, stop on a repeated signal, two
   attempts on an environment problem — are exactly what makes this tier safe
-  here. Haiku does not support `effort`, so the field is deliberately absent
-  from its role file.
+  here. Haiku 5.5 supports `effort`; `medium` is the recommended starting point
+  for agentic work. `low` can stop early or skip checks on long prompts, so the
+  role explicitly requires executing checks before reporting success. See the
+  [Haiku 5.5 prompting guide](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-haiku-5-5#use-effort-to-control-thinking).
 - **`scout` and `researcher` do not go down there.** Both produce facts the
   primary agent will believe without re-checking. Too low a tier yields
   confident, wrong claims whose rework costs more than the saving. Their effort
@@ -54,7 +63,7 @@ Three choices deserve a justification:
   equal quality.
 - **`builder` raises effort rather than tier, but stops at `high`.** Effort is
   the first quality lever within a model; `sonnet`/`high` costs half as much as
-  the tier above for input and output, and the same for cache reads. `xhigh` is
+  the tier above for input, output, and cache reads. `xhigh` is
   not the default: the documentation reserves it for long-horizon work with very
   large token budgets and for cases where evals show a gain, and `builder`'s
   bounded tasks (three attempts) are neither. Move it to `xhigh` only on
@@ -213,7 +222,7 @@ Things to know:
 - Do not combine the plugin with `install.py` in the same project: the rules
   would load twice and the project's roles would shadow the plugin's.
 - The release version is defined only in `.claude-plugin/plugin.json`
-  (`0.1.2` for this release). The marketplace does not duplicate it. Increment
+  (`0.1.3` for this release). The marketplace does not duplicate it. Increment
   it for every release so updates can distinguish versions.
 - `.claude/settings.json` contains shared configuration and is intentionally
   tracked by Git. Keep personal settings and secrets in the ignored
@@ -318,6 +327,11 @@ per-TTL breakdown and refuses to price a write whose TTL is unknown.
 Prices live in a single table at the top of the script; that is the only place
 to update when they change. `python test_extract_claude_jsonl.py` checks the
 script's contract against synthetic transcripts, with no model calls.
+
+Haiku 5.5 costs are calculated per deduplicated request before aggregation,
+so a role can mix prompts on either side of the 100,000-token threshold.
+Haiku 4.5 prices remain available for historical transcripts. Sonnet 5.5 cache
+reads now cost $0.10 per million tokens, following the October 7, 2026 update.
 
 ## Safety boundaries
 

@@ -27,7 +27,7 @@ efficacement, ou apporter une analyse indépendante utile.
 | Principal | `opus` | `xhigh` | 4 | 20 | Triage, décisions, intégration, petites tâches locales |
 | `scout` | `sonnet` | `medium` | 2 | 10 | Exploration en lecture seule du code et des logs |
 | `researcher` | `sonnet` | `medium` | 2 | 10 | Recherche documentaire multi-sources |
-| `runner` | `haiku` | *(non supporté)* | 1 | 5 | Validations longues et lots mécaniques |
+| `runner` | `claude-haiku-5-5` | `medium` | 0.10 / 0.50 | 0.50 / 2.50 | Validations longues et lots mécaniques |
 | `builder` | `sonnet` | `high` | 2 | 10 | Implémentation bornée avec validation ciblée |
 | `architect` | `opus`, ou `fable` sur accès confirmé | `xhigh` | 4 → 10 | 20 → 50 | Décisions d'architecture, rares et bornées |
 
@@ -39,13 +39,23 @@ ancien sur Bedrock, Vertex, Foundry et Claude Platform on AWS. Les niveaux
 d'effort de Sonnet 5.5 sont recalibrés par rapport à Sonnet 5 : les réglages ont
 été rechoisis d'après les recommandations officielles, pas reportés.
 
+`runner` utilise l'identifiant fixe de Haiku 5.5. Ses tarifs ci-dessus concernent
+respectivement les prompts jusqu'à / au-delà de 100 000 tokens. Le seuil inclut
+l'entrée non mise en cache, les écritures et les lectures de cache de chaque
+requête ; les tokens de sortie n'y comptent pas. L'entrée et la sortie prennent
+le tarif sélectionné pour toute la requête. Voir l'[annonce Haiku 5.5](https://www.anthropic.com/claude-haiku-5-5)
+et les [tarifs](https://platform.claude.com/docs/en/about-claude/pricing).
+
 Trois choix méritent une justification :
 
 - **`runner` sur le palier le moins cher.** Le rôle exécute et rapporte, il ne
   conçoit pas. Ses bornes — trois cycles correction/test, arrêt au premier signal
   répété, deux tentatives sur un problème d'environnement — sont précisément ce
-  qui rend ce palier sûr ici. Haiku ne supporte pas `effort` : le champ est
-  volontairement absent de son rôle.
+  qui rend ce palier sûr ici. Haiku 5.5 prend en charge `effort` ; `medium` est
+  le point de départ recommandé pour le travail agentique. `low` peut arrêter
+  le travail trop tôt ou omettre des vérifications sur de longs prompts : le
+  rôle exige donc d'exécuter les contrôles avant d'annoncer un succès. Voir le
+  [guide de prompting Haiku 5.5](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-haiku-5-5#use-effort-to-control-thinking).
 - **`scout` et `researcher` n'y descendent pas.** Tous deux produisent des faits
   que l'agent principal croira sans les revérifier ; un palier trop bas y produit
   des affirmations assurées et fausses, dont la reprise coûte plus que
@@ -55,7 +65,7 @@ Trois choix méritent une justification :
 - **`builder` monte en effort plutôt qu'en palier, mais s'arrête à `high`.**
   L'effort est le premier levier de qualité à l'intérieur d'un modèle ;
   `sonnet`/`high` coûte deux fois moins que le palier au-dessus en entrée et en
-  sortie, et autant en lecture de cache. `xhigh` n'est pas le défaut : la
+  sortie et en lecture de cache. `xhigh` n'est pas le défaut : la
   documentation le réserve aux tâches longues à très gros budget de tokens et
   aux cas où des évals montrent un gain, ce que les tâches bornées de `builder`
   (trois tentatives) ne sont pas. Ne le passer en `xhigh` que sur mesure, à
@@ -220,7 +230,7 @@ de l'application. Ouvrez ensuite une nouvelle session, ou lancez
 - Ne cumulez pas le plugin et `install.py` sur un même projet : les règles
   seraient chargées deux fois et les rôles du projet masqueraient ceux du plugin.
 - La version publiée est définie uniquement dans `.claude-plugin/plugin.json`
-  (`0.1.2` pour cette livraison). Le catalogue ne la duplique pas. Incrémentez-la
+  (`0.1.3` pour cette livraison). Le catalogue ne la duplique pas. Incrémentez-la
   à chaque livraison afin que la mise à jour distingue les versions.
 - `.claude/settings.json` est une configuration partagée, volontairement suivie
   par Git. Gardez vos réglages personnels et secrets dans
@@ -330,6 +340,12 @@ une écriture dont le TTL est inconnu.
 Les tarifs vivent dans une seule table en tête du script ; c'est le seul endroit
 à mettre à jour quand ils changent. `python test_extract_claude_jsonl.py` vérifie
 le contrat du script sur des transcripts synthétiques, sans aucun appel de modèle.
+
+Les coûts Haiku 5.5 sont calculés par requête dédupliquée avant agrégation : un
+rôle peut mélanger des prompts de part et d'autre du seuil de 100 000 tokens.
+Les tarifs Haiku 4.5 restent disponibles pour les anciens transcripts. La
+lecture de cache de Sonnet 5.5 coûte désormais 0,10 $ par million de tokens,
+selon la mise à jour du 7 octobre 2026.
 
 ## Limites de sécurité
 

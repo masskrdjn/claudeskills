@@ -25,7 +25,7 @@ MODEL_ALIASES = {"opus", "sonnet", "haiku", "fable", "inherit", "opusplan"}
 EFFORTS = {"low", "medium", "high", "xhigh", "max"}
 
 # Modeles sans support de `effort`. Ecrire le champ pour eux est une erreur.
-NO_EFFORT_MODELS = {"haiku"}
+NO_EFFORT_MODELS = {"claude-haiku-4-5", "claude-haiku-4-5-20251001"}
 
 failures = []
 
@@ -133,7 +133,7 @@ def t_efforts_valides():
         else:
             assert effort in EFFORTS, \
                 "%s : effort '%s' invalide" % (role, effort)
-    return "runner sans effort, 4 roles avec effort valide"
+    return "5 roles avec effort valide, dont Haiku 5.5"
 
 
 def t_aucun_role_ne_delegue():
@@ -254,11 +254,24 @@ def t_tarifs_coherents():
     assert table, "table de prix introuvable dans le script"
     expected = {"claude-opus-5-5": (4.0, 20.0), "claude-opus-5": (5.0, 25.0),
                 "claude-sonnet-5-5": (2.0, 10.0), "claude-sonnet-5": (2.0, 10.0),
-                "claude-haiku-4-5": (1.0, 5.0), "claude-fable-5-1": (10.0, 50.0)}
+                "claude-haiku-5-5": (0.10, 0.50), "claude-haiku-4-5": (1.0, 5.0),
+                "claude-fable-5-1": (10.0, 50.0)}
     for model, price in expected.items():
         got = table.get(model)
         assert got and got[:2] == price, \
             "%s : script dit %s, attendu %s" % (model, got, price)
+
+    assert table["claude-sonnet-5-5"][4] == 0.10, "tarif de lecture Sonnet 5.5 obsolete"
+    assert table["claude-haiku-5-5"] == (0.10, 0.50, 0.125, 0.20, 0.01)
+    haiku = re.search(r"'claude-haiku-5-5'\s*=\s*@\{(.*?)\n    \}", ps, re.S)
+    assert haiku and re.search(r"PromptTokenThreshold\s*=\s*100000\b", haiku.group(1)), \
+        "seuil Haiku 5.5 absent ou incorrect"
+    long_price = re.search(
+        r"AboveThreshold\s*=\s*@\{\s*Input\s*=\s*([\d.]+);\s*"
+        r"Output\s*=\s*([\d.]+);\s*CacheWrite5m\s*=\s*([\d.]+);\s*"
+        r"CacheWrite1h\s*=\s*([\d.]+);\s*CacheRead\s*=\s*([\d.]+)", haiku.group(1))
+    assert long_price and tuple(float(g) for g in long_price.groups()) == (0.50, 2.50, 0.625, 1.0, 0.05), \
+        "tarifs Haiku 5.5 au-dela de 100000 tokens absents ou incorrects"
 
     # Invariant de tarification du cache, verifie contre une facturation reelle :
     # ecriture 5 min = 1,25x l'entree, ecriture 1 h = 2x l'entree.
@@ -271,7 +284,7 @@ def t_tarifs_coherents():
     # Les memes chiffres doivent apparaitre dans les deux README.
     for doc in ("README.md", "README.fr.md"):
         txt = read(doc)
-        for role, cell in (("`runner`", "| 1 | 5 |"), ("`scout`", "| 2 | 10 |")):
+        for role, cell in (("`runner`", "| 0.10 / 0.50 | 0.50 / 2.50 |"), ("`scout`", "| 2 | 10 |")):
             rows = [l for l in txt.splitlines() if l.startswith("| " + role)]
             assert rows and cell in rows[0], \
                 "%s : tarifs de %s absents ou differents -> %s" % (doc, role, rows)

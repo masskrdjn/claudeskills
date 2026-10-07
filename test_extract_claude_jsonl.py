@@ -72,7 +72,8 @@ def agent_call(agent_id, agent_type, status="completed", duration=1000,
     }
 
 
-def run(root_records, subagents=(), raw_lines=(), session_id=SESSION):
+def run(root_records, subagents=(), raw_lines=(), session_id=SESSION,
+        price_table=None):
     """Ecrit l'arborescence, lance le script, rend le rapport parse.
 
     `subagents` : sequence de (agent_id, meta_or_None, [enregistrements]).
@@ -98,10 +99,23 @@ def run(root_records, subagents=(), raw_lines=(), session_id=SESSION):
                         json.dump(meta, fh)
 
         export = os.path.join(tmp, "report.json")
-        proc = subprocess.run(
-            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
-             "-File", SCRIPT, "-SessionsDir", tmp, "-ExportPath", export, "-Quiet"],
-            capture_output=True, text=True)
+        command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass"]
+        if price_table is None:
+            command += ["-File", SCRIPT, "-SessionsDir", tmp,
+                        "-ExportPath", export, "-Quiet"]
+        else:
+            # Les tarifs personnalises historiques sont des hashtables plates.
+            entries = []
+            for model, rates in price_table.items():
+                fields = "; ".join("%s = %s" % (key, value)
+                                   for key, value in rates.items())
+                entries.append("'%s' = @{ %s }" % (model, fields))
+            quote = lambda path: "'" + path.replace("'", "''") + "'"
+            command += ["-Command", "& %s -SessionsDir %s -ExportPath %s "
+                        "-Quiet -PriceTable @{ %s }" %
+                        (quote(SCRIPT), quote(tmp), quote(export),
+                         "; ".join(entries))]
+        proc = subprocess.run(command, capture_output=True, text=True)
         assert proc.returncode == 0, (
             "script en echec (code %s)\nSTDOUT:\n%s\nSTDERR:\n%s"
             % (proc.returncode, proc.stdout, proc.stderr))
@@ -295,12 +309,94 @@ def test_opus_5_5_n_herite_pas_du_prix_d_opus_5():
 
 
 def test_sonnet_5_5_n_herite_pas_de_sonnet_5():
-    """claude-sonnet-5 est un prefixe de claude-sonnet-5-5 : meme prix, mais
-    le modele doit etre reconnu sans diagnostic de prix absent."""
+    """Le nouveau tarif de lecture du cache ne doit pas toucher Sonnet 5."""
     report = run([turn("claude-sonnet-5-5", "m1", 1000, 1000, 0, 1000000)])
     assert report["Complete"] is True, report["Diagnostics"]
-    # 1000/1e6*2 + 1000/1e6*10 + 1e6/1e6*0.20
-    assert abs(bucket(report, "racine")["CostUsd"] - 0.212) < 1e-9
+    # 1000/1e6*2 + 1000/1e6*10 + 1e6/1e6*0.10
+    assert abs(bucket(report, "racine")["CostUsd"] - 0.112) < 1e-9
+
+
+# --- Haiku 5.5 : tarif choisi sur le prompt de chaque requete ---------------
+
+def test_haiku_5_5_bornes_100000_et_100001():
+    for inp, out, expected in [(100000, 1000, 0.0105),
+                               (100001, 1001, 0.052503)]:
+        report = run([turn("claude-haiku-5-5", "m1", inp, out, 0, 0)])
+        assert report["Complete"] is True, report["Diagnostics"]
+        assert abs(bucket(report, "racine")["CostUsd"] - expected) < 1e-9
+
+
+def test_haiku_5_5_chaque_cache_declenche_le_seuil():
+    # Chaque famille de cache compte dans le prompt, meme sans entree directe.
+    for c5, c1h, cr, expected in [(100001, 0, 0, 0.065003),
+                                 (0, 100001, 0, 0.102504),
+                                 (0, 0, 100001, 0.007503)]:
+        report = run([turn("claude-haiku-5-5", "m1", 0, 1001, c5, cr,
+                           cw_1h=c1h)])
+        assert report["Complete"] is True, report["Diagnostics"]
+        assert abs(bucket(report, "racine")["CostUsd"] - expected) < 1e-9
+
+
+def test_haiku_5_5_prompt_additionne_tous_les_caches():
+    report = run([turn("claude-haiku-5-5", "m1", 1, 1000, 40000, 30000,
+                       cw_1h=30000)])
+    # Prompt = 100001 ; tous les prix, dont la sortie, passent au tarif long.
+    assert report["Complete"] is True, report["Diagnostics"]
+    assert abs(bucket(report, "racine")["CostUsd"] - 0.059) < 1e-6
+
+
+def test_haiku_5_5_sortie_ne_declenche_pas_le_seuil():
+    report = run([turn("claude-haiku-5-5", "m1", 100000, 100001, 0, 0)])
+    assert report["Complete"] is True, report["Diagnostics"]
+    assert abs(bucket(report, "racine")["CostUsd"] - 0.0600005) < 1e-6
+
+
+def test_haiku_5_5_tours_courts_cumules_restent_courts():
+    report = run([turn("claude-haiku-5-5", "m1", 60000, 1000, 0, 0),
+                  turn("claude-haiku-5-5", "m2", 60000, 1000, 0, 0)])
+    b = bucket(report, "racine")
+    assert report["Complete"] is True, report["Diagnostics"]
+    assert b["InputTokens"] == 120000 and b["Turns"] == 2
+    assert abs(b["CostUsd"] - 0.013) < 1e-9
+
+
+def test_haiku_5_5_bucket_melange_tours_courts_et_longs():
+    report = run([turn("claude-haiku-5-5", "m1", 100000, 1000, 0, 0),
+                  turn("claude-haiku-5-5", "m2", 100001, 1001, 0, 0)])
+    b = bucket(report, "racine")
+    assert report["Complete"] is True, report["Diagnostics"]
+    assert b["Turns"] == 2 and b["InputTokens"] == 200001
+    assert abs(b["CostUsd"] - 0.063003) < 1e-9
+    assert report["TotalCostUsd"] == b["CostUsd"]
+
+
+def test_haiku_5_5_tarif_apres_maximum_deduplique():
+    report = run([
+        turn("claude-haiku-5-5", "m1", 60000, 2, 0, 40000, block="thinking"),
+        turn("claude-haiku-5-5", "m1", 60000, 1000, 0, 40001),
+    ])
+    b = bucket(report, "racine")
+    assert report["Complete"] is True, report["Diagnostics"]
+    assert b["Turns"] == 1 and b["OutputTokens"] == 1000
+    assert b["CacheReadTokens"] == 40001
+    assert abs(b["CostUsd"] - 0.0345) < 1e-9
+
+
+def test_haiku_5_5_arrondi_apres_somme_des_tours():
+    # 0.0000001 par tour : arrondir chaque tour donnerait zero au lieu de 1e-6.
+    report = run([turn("claude-haiku-5-5", "m%d" % i, 1, 0, 0, 0)
+                  for i in range(10)])
+    assert report["Complete"] is True, report["Diagnostics"]
+    assert bucket(report, "racine")["CostUsd"] == 0.000001
+
+
+def test_haiku_5_5_table_personnalisee_plate_reste_prioritaire():
+    report = run([turn("claude-haiku-5-5", "m1", 100001, 1000, 2000, 4000,
+                       cw_1h=3000)], price_table={"claude-haiku-5-5": {
+                           "Input": 1, "Output": 5, "CacheWrite5m": 1.25,
+                           "CacheWrite1h": 2, "CacheRead": 0.1}})
+    assert report["Complete"] is True, report["Diagnostics"]
+    assert abs(bucket(report, "racine")["CostUsd"] - 0.113901) < 1e-9
 
 
 if __name__ == "__main__":

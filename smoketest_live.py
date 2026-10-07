@@ -24,7 +24,7 @@ failures = []
 runs = []
 
 
-def claude(prompt, model="haiku", extra=()):
+def claude(prompt, model="claude-haiku-5-5", extra=()):
     """Une session -p bornee. Rend l'enveloppe JSON de resultat."""
     cmd = ["claude", "-p", prompt, "--model", model, "--output-format", "json"]
     cmd += list(extra)
@@ -79,7 +79,7 @@ def t_session_demarre():
 
 
 def t_role_scout_est_lance_et_resolu_en_sonnet():
-    """Le modele du role doit primer sur celui de la session racine (haiku)."""
+    """Le modele du role doit primer sur celui de la session racine (Haiku 5.5)."""
     env = claude(
         "Utilise l'outil Agent avec subagent_type 'scout' pour lister les "
         "fichiers .md a la racine du depot. N'utilise aucun autre outil "
@@ -91,7 +91,7 @@ def t_role_scout_est_lance_et_resolu_en_sonnet():
     used = models_used(env)
     assert any("sonnet" in m for m in used), \
         ("le sous-agent n'a pas tourne sur sonnet ; modeles factures : %s. "
-         "La racine etait en haiku, donc sonnet ne peut venir que du role." % used)
+         "La racine etait en Haiku 5.5, donc sonnet ne peut venir que du role." % used)
     return "roles lances %s, modeles %s" % (list(spawned), used)
 
 
