@@ -1,6 +1,6 @@
 ---
 name: scout
-description: Exploration étendue ou indépendante en lecture seule : fichiers, appelants, flux et logs. Les lectures locales bornées peuvent rester à la racine.
+description: "Exploration étendue ou indépendante en lecture seule : fichiers, appelants, flux et logs. Les lectures locales bornées peuvent rester à la racine."
 model: sonnet
 effort: medium
 tools: Read, Grep, Glob

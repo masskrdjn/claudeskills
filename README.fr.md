@@ -230,7 +230,7 @@ de l'application. Ouvrez ensuite une nouvelle session, ou lancez
 - Ne cumulez pas le plugin et `install.py` sur un même projet : les règles
   seraient chargées deux fois et les rôles du projet masqueraient ceux du plugin.
 - La version publiée est définie uniquement dans `.claude-plugin/plugin.json`
-  (`0.1.3` pour cette livraison). Le catalogue ne la duplique pas. Incrémentez-la
+  (`0.1.4` pour cette livraison). Le catalogue ne la duplique pas. Incrémentez-la
   à chaque livraison afin que la mise à jour distingue les versions.
 - `.claude/settings.json` est une configuration partagée, volontairement suivie
   par Git. Gardez vos réglages personnels et secrets dans

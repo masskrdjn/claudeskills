@@ -35,6 +35,11 @@ if __name__ == "__main__":
     for path in agents:
         head = path.read_text(encoding="utf-8").split("---")[1]
         assert not re.search(rf"^({'|'.join(IGNORED)}):", head, re.M), f"{path.name}: champ ignoré par le plugin"
+        # Un « : » non guillemeté invalide le YAML : le runtime perd alors model et tools.
+        for line in head.strip().splitlines():
+            key, _, value = line.partition(": ")
+            assert value[:1] in "\"'" or ": " not in value and " #" not in value, f"{path.name}: {key} à mettre entre guillemets"
+        assert re.search(r"^model: \S", head, re.M) and re.search(r"^tools: \S", head, re.M), f"{path.name}: model ou tools absent"
     assert (ROOT / manifest["skills"] / "quota-orchestrator/SKILL.md").is_file()
 
     hook = manifest["hooks"]["SessionStart"][0]

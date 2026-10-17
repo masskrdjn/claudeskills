@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Consultant de décision. Tranche un arbitrage conceptuel ou d'architecture à partir d'un contexte déjà rassemblé. N'explore pas, n'implémente pas, n'exécute rien. Coûteux : ne l'appeler que si un palier inférieur ferait sensiblement moins bien.
+description: "Consultant de décision. Tranche un arbitrage conceptuel ou d'architecture à partir d'un contexte déjà rassemblé. N'explore pas, n'implémente pas, n'exécute rien. Coûteux : ne l'appeler que si un palier inférieur ferait sensiblement moins bien."
 model: opus
 effort: xhigh
 tools: Read
