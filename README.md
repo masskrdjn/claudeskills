@@ -222,7 +222,7 @@ Things to know:
 - Do not combine the plugin with `install.py` in the same project: the rules
   would load twice and the project's roles would shadow the plugin's.
 - The release version is defined only in `.claude-plugin/plugin.json`
-  (`0.1.4` for this release). The marketplace does not duplicate it. Increment
+  (`0.1.5` for this release). The marketplace does not duplicate it. Increment
   it for every release so updates can distinguish versions.
 - `.claude/settings.json` contains shared configuration and is intentionally
   tracked by Git. Keep personal settings and secrets in the ignored
