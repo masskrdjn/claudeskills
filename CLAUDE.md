@@ -12,7 +12,14 @@ Une petite tâche locale ou consultation documentaire à une seule source reste
 validation comprise. Un lot déterministe borné ou une implémentation locale
 au contrat explicite reste aussi à la racine ; déléguer à `runner` ou `builder`
 seulement si le travail est assez long ou indépendant pour amortir la
-coordination. Toute recherche documentaire comportant plusieurs questions ou
+coordination. `runner` n'est jamais appelé pour être appelé : il convient à une
+barrière de validation sur arbre figé, à une matrice d'au moins trois commandes
+ou environ deux minutes, ou à une validation en parallèle d'un travail racine
+disjoint, et seulement si la racine annonce un bénéfice concret (racine libre,
+sortie volumineuse à ne pas ingérer, verdict seul) supérieur au coût de
+l'enveloppe et du rapport. Une commande unique à sortie filtrée, une boucle
+correction/test ou une validation déjà faite par `builder` restent à la racine
+(détail dans le skill). Toute recherche documentaire comportant plusieurs questions ou
 plusieurs sources passe par `researcher` ; la racine charge
 `quota-orchestrator`, crée effectivement ce sous-agent, puis attend son
 résultat. Elle ne fait pas elle-même la recherche et n'attend jamais sans

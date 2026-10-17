@@ -39,7 +39,7 @@ compter les opérations pour déclencher une délégation.
 |---|---|
 | Petit travail local, lot déterministe borné ou implémentation locale au contrat explicite | Racine : lecture, modification et validation |
 | Exploration étendue ou indépendante d'un travail utile de la racine | `scout` |
-| Validation assez longue et indépendante pour amortir la coordination | `runner` |
+| Barrière de validation sur arbre figé, matrice d'au moins trois commandes ou environ deux minutes, ou validation en parallèle d'un travail racine disjoint (voir « Quand `runner` est le chemin normal ») | `runner` |
 | Implémentation substantielle ou indépendante dont la délégation est amortie | `builder`, validation ciblée comprise |
 | Consultation documentaire ponctuelle | Racine directement |
 | Recherche documentaire à plusieurs questions ou sources | `researcher` |
@@ -277,6 +277,35 @@ le contrôle nécessaire. Pour un changement à risque (sécurité, perte de don
 migration, contrat public), conserver une revue indépendante ciblée ; ne pas
 confondre cette revue avec la répétition du même test. `architect` n'est pas le
 testeur final et n'exécute pas cette revue de validation.
+
+### Quand `runner` est le chemin normal
+
+`runner` ne s'appelle jamais pour être appelé : une condition ci-dessous est
+nécessaire, jamais suffisante. Il faut en plus un bénéfice concret et annoncé en
+une ligne (racine libre pendant l'attente, sortie volumineuse qui n'entrera pas
+dans le contexte racine, ou verdict seul requis) qui dépasse le coût de
+l'enveloppe et de la lecture du rapport. Sans ce bénéfice, la racine lance la
+commande elle-même. Conditions :
+
+- **barrière finale sur arbre figé** : suite complète, build ou smoke avant
+  commit ou remise, quand la racine n'a plus de modification en cours sur les
+  fichiers testés et n'a besoin que du verdict ;
+- **matrice de validation** : au moins trois commandes ou environ deux minutes
+  d'exécution cumulées, dont la racine n'a pas à lire la sortie intégrale ;
+- **validation en parallèle** : la racine a un travail utile sur des fichiers
+  que la validation ne touche pas, et la commande est connue.
+
+`runner` n'est pas indiqué si la validation s'enchaîne avec des corrections
+décidées par la racine (boucle correction/test), si c'est une commande unique
+dont la sortie filtrée tient en quelques lignes, ou si le `builder` l'a déjà
+exécutée sur l'état actuel. Le gain attendu est surtout un contexte racine plus
+court et une racine libre pendant l'attente ; il n'est pas démontré tant qu'aucun
+run complet n'a mesuré le coût `runner` contre le coût racine.
+
+Dans l'enveloppe, donner au `runner` les commandes exactes, le critère de
+passage, les fichiers à ne pas modifier et l'état connu ; il rapporte le code de
+sortie mesuré et l'erreur essentielle, et remonte tout échec dont la cause n'est
+pas évidente et locale.
 
 L'échec est un livrable valide. Garder les bornes des rôles : runner, trois
 cycles correction/test ; environnement, deux tentatives ; scout, trois

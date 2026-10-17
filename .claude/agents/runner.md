@@ -1,6 +1,6 @@
 ---
 name: runner
-description: Exécution de validations assez longues et indépendantes pour amortir la coordination. Les lots déterministes bornés restent à la racine.
+description: Barrière de validation sur arbre figé, matrice d'au moins trois commandes ou environ deux minutes, ou validation en parallèle d'un travail racine disjoint, quand un bénéfice concret amortit la coordination. Une commande unique à sortie filtrée ou une boucle correction/test reste à la racine.
 model: claude-haiku-5-5
 effort: medium
 tools: Bash, Read, Grep, Glob, Edit
