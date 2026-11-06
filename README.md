@@ -135,35 +135,15 @@ Validation without model calls: `python test_agent_identity.py`.
 
 ## Project layout
 
-```text
-.
-├── CLAUDE.md
-├── extract_claude_jsonl.ps1
-├── test_extract_claude_jsonl.py
-├── test_plugin.py
-├── .claude-plugin/
-│   ├── marketplace.json
-│   └── plugin.json
-└── .claude/
-    ├── hooks/agent_identity.py
-    ├── settings.json
-    ├── skills/quota-orchestrator/SKILL.md
-    └── agents/
-        ├── architect.md
-        ├── builder.md
-        ├── researcher.md
-        ├── runner.md
-        └── scout.md
-```
-
-- `CLAUDE.md` defines the repository-wide routing and safety rules.
-- `quota-orchestrator` decides whether delegation is worth its full cost.
-- `.claude/settings.json` sets default and per-model effort.
-- `.claude/agents/*.md` defines each role's model, effort, tools, bounds, and
-  reporting contract.
-- `.claude-plugin/` turns the repository into a plugin marketplace that reuses
-  these same files.
-- `extract_claude_jsonl.ps1` measures what all of it actually consumes.
+- `CLAUDE.md`, `.claude/agents/`, and
+  `.claude/skills/quota-orchestrator/SKILL.md` define the routing rules, roles,
+  and decision workflow.
+- `.claude/settings.json` sets shared defaults; `.claude/hooks/agent_identity.py`
+  reports model metadata observed for each child agent.
+- `.claude-plugin/` packages these components as a Claude Code plugin;
+  `install.py` adds them to an existing project.
+- `extract_claude_jsonl.ps1` calculates token use, duration, and dollar cost from
+  session transcripts.
 
 ## Usage
 
@@ -205,10 +185,10 @@ claude plugin install claudeskills@claudeskills
 From a local checkout, `claude plugin marketplace add .` replaces the first
 command, and `claude --plugin-dir .` loads the plugin for a single session
 without installing it. In the desktop app (Code tab), click **+** next to the
-prompt box, then **Plugins** → **Add plugin**, and pick `claudeskills` once the
-marketplace is known; a user-scope install from the CLI is also available in
-the app's local sessions. Start a new session, or run `/reload-plugins`,
-afterwards.
+prompt box, then **Add plugins**. If the menu shows **Plugins**, choose
+**Browse plugins**. Find `claudeskills` once its marketplace is known; a
+user-scope install from the CLI is also available in the app's local sessions.
+Start a new session, or run `/reload-plugins`, afterwards.
 
 Things to know:
 
@@ -248,6 +228,7 @@ claude plugin validate .claude-plugin/plugin.json
 claude plugin validate .claude-plugin/marketplace.json --strict
 python test_plugin.py
 python test_agent_identity.py
+python test_extract_claude_jsonl.py
 python test_install.py
 python smoketest.py
 ```
@@ -346,7 +327,8 @@ reads now cost $0.10 per million tokens, following the October 7, 2026 update.
 
 Edit `.claude/settings.json` for default efforts, and the matching file under
 `.claude/agents/` to change a role. Keep models, efforts, and role boundaries
-synchronized across `CLAUDE.md`, `quota-orchestrator/SKILL.md`, and this README.
+synchronized across `CLAUDE.md`,
+`.claude/skills/quota-orchestrator/SKILL.md`, and this README.
 A new role must also be listed under `agents` in `.claude-plugin/plugin.json`;
 `python test_plugin.py` checks the manifests against the repository.
 
