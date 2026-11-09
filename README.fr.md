@@ -1,5 +1,9 @@
 # Routage sélectif multi-modèles pour Claude Code
 
+> [!IMPORTANT]
+> **ClaudeSkills est déprécié.** QuotaOrchestrator prend en charge Codex et Claude Code.
+> [Migrer vers QuotaOrchestrator](https://github.com/masskrdjn/QuotaOrchestrator/blob/main/plugins/quota-orchestrator/claude/README.fr.md#migrer-depuis-claudeskills).
+
 [English](README.md)
 
 Une configuration Claude Code, installable en plugin ou par projet, qui confie

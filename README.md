@@ -1,5 +1,9 @@
 # Selective Multi-Model Routing for Claude Code
 
+> [!IMPORTANT]
+> **ClaudeSkills is deprecated.** QuotaOrchestrator supports both Codex and Claude Code.
+> [Migrate to QuotaOrchestrator](https://github.com/masskrdjn/QuotaOrchestrator/blob/main/plugins/quota-orchestrator/claude/README.md#migrate-from-claudeskills).
+
 [Français](README.fr.md)
 
 A Claude Code configuration, installable as a plugin or per project, that
